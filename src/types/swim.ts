@@ -1,0 +1,51 @@
+export type StrokeType = 'LIBRE' | 'PECHO' | 'ESPALDA' | 'MARIPOSA' | 'COMBINADO';
+
+export type ZoneCode = 'A1' | 'A2_80' | 'A2_85' | 'MVO2_90' | 'MVO2_95' | 'TL' | 'RL' | 'VEL';
+
+export interface ZoneConfig {
+  code: ZoneCode;
+  label: string;
+  category: 'A1' | 'A2' | 'MVO2' | 'TL' | 'RL' | 'VEL';
+  vmPercent: number; // e.g. 0.80, 0.85, 0.90, 0.95, 0.97, 1.00
+  description: string;
+  restDescription: string;
+  defaultRestSecs: (distance: number) => number;
+  energySystem: string;
+}
+
+export interface Swimmer {
+  id: string;
+  name: string;
+  age: number;
+  category?: string;
+  notes?: string;
+  // Personal Bests: times in seconds keyed by stroke and distance
+  // e.g. pbs['LIBRE'][100] = 61.07
+  pbs: Partial<Record<StrokeType, Record<number, number>>>;
+}
+
+export interface PaceCalculation {
+  distance: number;
+  stroke: StrokeType;
+  competitionTime: number; // T_comp
+  objectiveTime: number;   // -3%
+  incrementTime: number;   // +3% increment
+  trainingBaseTime: number;// T_comp + Increment
+  zones: {
+    config: ZoneConfig;
+    paceTime: number;      // T_base * (2 - vm)
+    bpm: number;           // (220 - age) * vm
+    pulse5s: number;       // bpm / 12
+    restSecs: number;
+  }[];
+}
+
+export interface WorkoutSet {
+  id: string;
+  swimmerId: string;
+  stroke: StrokeType;
+  distance: number;
+  reps: number;
+  zone: ZoneCode;
+  customRestSecs?: number;
+}

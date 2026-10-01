@@ -1,0 +1,283 @@
+import React, { useState } from 'react';
+import { useSwim } from '../context/SwimContext';
+import { calculateMaxHR } from '../utils/swimCalculations';
+import { UserPlus, UserCheck, Trash2, Edit2, Activity, Trophy, X, Check } from 'lucide-react';
+import type { Swimmer } from '../types/swim';
+
+export const SwimmersView: React.FC = () => {
+  const {
+    swimmers,
+    selectedSwimmerId,
+    setSelectedSwimmerId,
+    addSwimmer,
+    updateSwimmer,
+    deleteSwimmer,
+  } = useSwim();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSwimmer, setEditingSwimmer] = useState<Swimmer | null>(null);
+
+  // Form states
+  const [formName, setFormName] = useState('');
+  const [formAge, setFormAge] = useState(25);
+  const [formCategory, setFormCategory] = useState('Primera');
+  const [formNotes, setFormNotes] = useState('');
+
+  const openCreateModal = () => {
+    setEditingSwimmer(null);
+    setFormName('');
+    setFormAge(25);
+    setFormCategory('Primera');
+    setFormNotes('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (swimmer: Swimmer) => {
+    setEditingSwimmer(swimmer);
+    setFormName(swimmer.name);
+    setFormAge(swimmer.age);
+    setFormCategory(swimmer.category || '');
+    setFormNotes(swimmer.notes || '');
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+
+    if (editingSwimmer) {
+      updateSwimmer(editingSwimmer.id, {
+        name: formName.trim(),
+        age: formAge,
+        category: formCategory.trim(),
+        notes: formNotes.trim(),
+      });
+    } else {
+      addSwimmer({
+        name: formName.trim(),
+        age: formAge,
+        category: formCategory.trim(),
+        notes: formNotes.trim(),
+        pbs: {},
+      });
+    }
+    setIsModalOpen(false);
+  };
+
+  return (
+    <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
+      {/* Header and Add button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black text-white">Plantel de Nadadores</h2>
+          <p className="text-xs text-slate-400">Administra a tus atletas y sus perfiles</p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 active:scale-95 transition-all"
+        >
+          <UserPlus className="w-4 h-4" />
+          Nuevo Atleta
+        </button>
+      </div>
+
+      {/* Swimmer Cards */}
+      <div className="space-y-3">
+        {swimmers.map((s) => {
+          const isSelected = s.id === selectedSwimmerId;
+          const maxHR = calculateMaxHR(s.age);
+
+          // Count registered PBs
+          let pbCount = 0;
+          Object.values(s.pbs).forEach((strokeMap) => {
+            if (strokeMap) pbCount += Object.keys(strokeMap).length;
+          });
+
+          return (
+            <div
+              key={s.id}
+              onClick={() => setSelectedSwimmerId(s.id)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer relative ${
+                isSelected
+                  ? 'bg-gradient-to-br from-slate-900 to-slate-950 border-cyan-500 shadow-lg shadow-cyan-500/10'
+                  : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              {isSelected && (
+                <div className="absolute top-3 right-3 flex items-center gap-1 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/30">
+                  <UserCheck className="w-3 h-3" />
+                  Activo
+                </div>
+              )}
+
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center text-xl font-black text-cyan-300 shadow-inner">
+                  {s.name.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="flex-1 min-w-0 pr-12">
+                  <h3 className="font-bold text-white text-base truncate">{s.name}</h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 flex-wrap">
+                    <span>{s.age} años</span>
+                    <span>•</span>
+                    <span className="text-cyan-400 font-medium">{s.category || 'General'}</span>
+                  </div>
+
+                  {s.notes && (
+                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-1 italic">
+                      "{s.notes}"
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats Bar */}
+              <div className="mt-3.5 pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/60 flex items-center justify-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-red-400" />
+                  <span className="text-slate-400 text-[11px]">FC Máx:</span>
+                  <strong className="text-white font-mono">{maxHR} bpm</strong>
+                </div>
+
+                <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/60 flex items-center justify-center gap-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-slate-400 text-[11px]">Marcas:</span>
+                  <strong className="text-white font-mono">{pbCount} pruebas</strong>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="mt-3 flex items-center justify-end gap-2 pt-2 border-t border-slate-800/40">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(s);
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition-colors"
+                  title="Editar nadador"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                {swimmers.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`¿Eliminar a ${s.name}?`)) {
+                        deleteSwimmer(s.id);
+                      }
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                    title="Eliminar nadador"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Create / Edit Swimmer Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 className="font-bold text-white text-base">
+                {editingSwimmer ? 'Editar Atleta' : 'Nuevo Nadador'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">
+                  Nombre y Apellido
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Martín Rodríguez"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">
+                    Edad
+                  </label>
+                  <input
+                    type="number"
+                    min={8}
+                    max={100}
+                    required
+                    value={formAge}
+                    onChange={(e) => setFormAge(parseInt(e.target.value) || 18)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-cyan-500"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    FCM: {220 - formAge} bpm
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">
+                    Categoría
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Máster / Juvenil"
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">
+                  Notas / Estilos clave
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej: Fondista, trabaja en 400 y 1500m libre..."
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-750"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs hover:bg-cyan-400 flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20"
+                >
+                  <Check className="w-4 h-4" />
+                  {editingSwimmer ? 'Guardar Cambios' : 'Crear Nadador'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
