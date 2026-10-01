@@ -50,3 +50,25 @@ export interface WorkoutSet {
   zone: ZoneCode;
   customRestSecs?: number;
 }
+
+export type WorkoutCategory = 'Aeróbico A1/A2' | 'MVO2' | 'Láctico / Tolerancia' | 'Velocidad' | 'Mixto';
+
+export interface SavedWorkout {
+  id: string;
+  title: string;
+  description?: string;
+  category?: WorkoutCategory;
+  createdAt: string; // ISO date string
+  sets: Omit<WorkoutSet, 'id'>[];
+  totalMeters: number;
+}
+
+export interface MultiLaneSlot {
+  id: string;
+  laneNumber: number;
+  swimmerId: string;
+  stroke: StrokeType;
+  distance: number;
+  zone: ZoneCode;
+  laps: number[]; // recorded split times in seconds
+}

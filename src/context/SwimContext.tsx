@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Swimmer, StrokeType, WorkoutSet } from '../types/swim';
+import type { Swimmer, StrokeType, WorkoutSet, SavedWorkout, WorkoutCategory } from '../types/swim';
 import { DEFAULT_SWIMMERS } from '../data/defaultSwimmers';
+import { DEFAULT_WORKOUT_TEMPLATES } from '../data/defaultWorkouts';
 
 interface SwimContextType {
   swimmers: Swimmer[];
@@ -16,12 +17,19 @@ interface SwimContextType {
   addWorkoutSet: (set: Omit<WorkoutSet, 'id'>) => void;
   removeWorkoutSet: (id: string) => void;
   clearWorkout: () => void;
+  savedWorkouts: SavedWorkout[];
+  saveCurrentWorkout: (title: string, description?: string, category?: WorkoutCategory) => SavedWorkout;
+  loadSavedWorkout: (savedId: string) => void;
+  deleteSavedWorkout: (id: string) => void;
+  exportBackup: () => void;
+  importBackup: (jsonContent: string) => { success: boolean; message: string };
 }
 
 const SwimContext = createContext<SwimContextType | undefined>(undefined);
 
 const STORAGE_KEY_SWIMMERS = 'swimcoach_swimmers_v1';
 const STORAGE_KEY_WORKOUTS = 'swimcoach_workouts_v1';
+const STORAGE_KEY_SAVED_WORKOUTS = 'swimcoach_saved_workouts_v1';
 
 export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [swimmers, setSwimmers] = useState<Swimmer[]>(() => {
@@ -70,6 +78,19 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ];
   });
 
+  const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_SAVED_WORKOUTS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading saved workouts from localStorage', e);
+    }
+    return DEFAULT_WORKOUT_TEMPLATES;
+  });
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SWIMMERS, JSON.stringify(swimmers));
   }, [swimmers]);
@@ -77,6 +98,10 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(workouts));
   }, [workouts]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SAVED_WORKOUTS, JSON.stringify(savedWorkouts));
+  }, [savedWorkouts]);
 
   const selectedSwimmer = swimmers.find((s) => s.id === selectedSwimmerId) || swimmers[0] || DEFAULT_SWIMMERS[0];
 
@@ -128,8 +153,10 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (window.confirm('¿Reiniciar a los datos originales de la planilla del entrenador?')) {
       setSwimmers(DEFAULT_SWIMMERS);
       setSelectedSwimmerId(DEFAULT_SWIMMERS[0].id);
+      setSavedWorkouts(DEFAULT_WORKOUT_TEMPLATES);
       localStorage.removeItem(STORAGE_KEY_SWIMMERS);
       localStorage.removeItem(STORAGE_KEY_WORKOUTS);
+      localStorage.removeItem(STORAGE_KEY_SAVED_WORKOUTS);
     }
   };
 
@@ -144,6 +171,111 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearWorkout = () => {
     setWorkouts([]);
+  };
+
+  // Workout Library methods
+  const saveCurrentWorkout = (
+    title: string,
+    description?: string,
+    category?: WorkoutCategory
+  ): SavedWorkout => {
+    const totalMeters = workouts.reduce((acc, curr) => acc + curr.reps * curr.distance, 0);
+    const newSaved: SavedWorkout = {
+      id: 'saved-' + Date.now(),
+      title: title.trim() || `Entrenamiento ${new Date().toLocaleDateString()}`,
+      description: description?.trim(),
+      category: category || 'Mixto',
+      createdAt: new Date().toISOString(),
+      totalMeters,
+      sets: workouts.map((w) => ({
+        swimmerId: '',
+        stroke: w.stroke,
+        distance: w.distance,
+        reps: w.reps,
+        zone: w.zone,
+        customRestSecs: w.customRestSecs,
+      })),
+    };
+
+    setSavedWorkouts((prev) => [newSaved, ...prev]);
+    return newSaved;
+  };
+
+  const loadSavedWorkout = (savedId: string) => {
+    const saved = savedWorkouts.find((sw) => sw.id === savedId);
+    if (!saved) return;
+
+    const newSets: WorkoutSet[] = saved.sets.map((s, idx) => ({
+      ...s,
+      id: `w-${Date.now()}-${idx}`,
+      swimmerId: selectedSwimmer.id,
+    }));
+
+    setWorkouts(newSets);
+  };
+
+  const deleteSavedWorkout = (id: string) => {
+    setSavedWorkouts((prev) => prev.filter((sw) => sw.id !== id));
+  };
+
+  // Backup methods
+  const exportBackup = () => {
+    const backupData = {
+      app: 'SwimCoach Pro',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      swimmers,
+      workouts,
+      savedWorkouts,
+    };
+
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `swimcoach_backup_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importBackup = (jsonContent: string): { success: boolean; message: string } => {
+    try {
+      const data = JSON.parse(jsonContent);
+
+      if (!data || !Array.isArray(data.swimmers) || data.swimmers.length === 0) {
+        return {
+          success: false,
+          message: 'El archivo no contiene un listado válido de nadadores de SwimCoach.',
+        };
+      }
+
+      setSwimmers(data.swimmers);
+      if (data.swimmers[0]) {
+        setSelectedSwimmerId(data.swimmers[0].id);
+      }
+
+      if (Array.isArray(data.workouts)) {
+        setWorkouts(data.workouts);
+      }
+
+      if (Array.isArray(data.savedWorkouts) && data.savedWorkouts.length > 0) {
+        setSavedWorkouts(data.savedWorkouts);
+      }
+
+      return {
+        success: true,
+        message: `¡Copia restaurada exitosamente! Se importaron ${data.swimmers.length} nadador(es).`,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Error al procesar el archivo JSON: ${err?.message || 'Formato inválido'}`,
+      };
+    }
   };
 
   return (
@@ -162,6 +294,12 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addWorkoutSet,
         removeWorkoutSet,
         clearWorkout,
+        savedWorkouts,
+        saveCurrentWorkout,
+        loadSavedWorkout,
+        deleteSavedWorkout,
+        exportBackup,
+        importBackup,
       }}
     >
       {children}

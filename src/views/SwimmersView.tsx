@@ -15,8 +15,10 @@ import {
   Camera,
   AlertCircle,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Swimmer } from '../types/swim';
+import { BackupModal } from '../components/BackupModal';
 
 export const SwimmersView: React.FC = () => {
   const {
@@ -29,6 +31,7 @@ export const SwimmersView: React.FC = () => {
   } = useSwim();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [editingSwimmer, setEditingSwimmer] = useState<Swimmer | null>(null);
 
   // Form states
@@ -127,18 +130,28 @@ export const SwimmersView: React.FC = () => {
   return (
     <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
       {/* Header and Add button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-black text-white">Plantel de Nadadores</h2>
           <p className="text-xs text-slate-400">Toca la foto o el botón para cargar imagen</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 active:scale-95 transition-all"
-        >
-          <UserPlus className="w-4 h-4" />
-          Nuevo Atleta
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setIsBackupOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-cyan-300 font-semibold text-xs border border-slate-700 active:scale-95 transition-all"
+            title="Copia de seguridad y sincronización"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[11px]">Copia</span>
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 active:scale-95 transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+            Nuevo
+          </button>
+        </div>
       </div>
 
       {/* Swimmer Cards */}
@@ -453,6 +466,9 @@ export const SwimmersView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Backup Modal */}
+      <BackupModal isOpen={isBackupOpen} onClose={() => setIsBackupOpen(false)} />
     </div>
   );
 };
