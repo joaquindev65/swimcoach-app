@@ -1,6 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSwim } from '../context/SwimContext';
-import { calculatePacesForDistance, formatTime, STROKES, STROKE_DISTANCES, ZONES_CONFIG } from '../utils/swimCalculations';
+import {
+  calculatePacesForDistance,
+  formatTime,
+  STROKES,
+  STROKE_DISTANCES,
+  ZONES_CONFIG,
+} from '../utils/swimCalculations';
+import {
+  initAudio,
+  playCountdownBeep,
+  playStartHorn,
+  playCompleteFanfare,
+} from '../utils/audioUtils';
 import {
   Play,
   Pause,
@@ -13,17 +25,23 @@ import {
   Plus,
   Trash2,
   Clock,
+  Volume2,
+  VolumeX,
+  AlarmClock,
+  SkipForward,
+  SkipBack,
+  Sparkles,
 } from 'lucide-react';
 import { SwimmerAvatar } from '../components/SwimmerAvatar';
-import type { StrokeType, ZoneCode, MultiLaneSlot } from '../types/swim';
+import type { StrokeType, ZoneCode, MultiLaneSlot, WorkoutSet } from '../types/swim';
 
 export const PoolsideView: React.FC = () => {
   const { swimmers, selectedSwimmer, workouts } = useSwim();
 
-  // Mode: 'single' (traditional) | 'multi' (multiple lanes simultaneously)
-  const [timerMode, setTimerMode] = useState<'single' | 'multi'>('single');
+  // Mode: 'single' | 'multi' | 'sendoff'
+  const [timerMode, setTimerMode] = useState<'single' | 'multi' | 'sendoff'>('single');
 
-  // Shared Stopwatch state
+  // Shared Stopwatch state for Single and Multi
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [singleLaps, setSingleLaps] = useState<number[]>([]);
@@ -42,6 +60,18 @@ export const PoolsideView: React.FC = () => {
     }));
   });
 
+  // SEND-OFF / INTERVAL TIMER STATE
+  const [sendoffRunning, setSendoffRunning] = useState(false);
+  const [sendoffRepsTotal, setSendoffRepsTotal] = useState(8);
+  const [sendoffCurrentRep, setSendoffCurrentRep] = useState(1);
+  const [sendoffCycleSecs, setSendoffCycleSecs] = useState(60);
+  const [sendoffRemainingSecs, setSendoffRemainingSecs] = useState(60);
+  const [sendoffIsPrep, setSendoffIsPrep] = useState(false);
+  const [sendoffPrepSecs, setSendoffPrepSecs] = useState(5);
+  const [sendoffSound, setSendoffSound] = useState(true);
+  const [sendoffCompleted, setSendoffCompleted] = useState(false);
+
+  // Interval reference for stopwatch
   useEffect(() => {
     let interval: any = null;
     if (timerRunning) {
@@ -52,6 +82,120 @@ export const PoolsideView: React.FC = () => {
     return () => clearInterval(interval);
   }, [timerRunning]);
 
+  // Interval tick for Send-off Timer (1 second accuracy)
+  const sendoffTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!sendoffRunning) {
+      if (sendoffTimerRef.current) clearInterval(sendoffTimerRef.current);
+      return;
+    }
+
+    sendoffTimerRef.current = setInterval(() => {
+      if (sendoffIsPrep) {
+        setSendoffPrepSecs((prev) => {
+          const next = prev - 1;
+          if (next > 0 && next <= 3 && sendoffSound) {
+            playCountdownBeep();
+          } else if (next === 0) {
+            if (sendoffSound) playStartHorn();
+            setSendoffIsPrep(false);
+            setSendoffRemainingSecs(sendoffCycleSecs);
+            setSendoffCurrentRep(1);
+            return 5;
+          }
+          return next;
+        });
+      } else {
+        setSendoffRemainingSecs((prev) => {
+          const next = prev - 1;
+          if (next > 0 && next <= 3 && sendoffSound) {
+            playCountdownBeep();
+          } else if (next <= 0) {
+            setSendoffCurrentRep((currRep) => {
+              if (currRep >= sendoffRepsTotal) {
+                // Completed whole workout!
+                setSendoffRunning(false);
+                setSendoffCompleted(true);
+                if (sendoffSound) playCompleteFanfare();
+                return currRep;
+              } else {
+                if (sendoffSound) playStartHorn();
+                setSendoffRemainingSecs(sendoffCycleSecs);
+                return currRep + 1;
+              }
+            });
+            return sendoffCycleSecs;
+          }
+          return next;
+        });
+      }
+    }, 1000);
+
+    return () => {
+      if (sendoffTimerRef.current) clearInterval(sendoffTimerRef.current);
+    };
+  }, [sendoffRunning, sendoffIsPrep, sendoffCycleSecs, sendoffRepsTotal, sendoffSound]);
+
+  // Sendoff Controls
+  const handleStartSendoff = () => {
+    initAudio();
+    if (sendoffCompleted) {
+      setSendoffCompleted(false);
+      setSendoffCurrentRep(1);
+      setSendoffRemainingSecs(sendoffCycleSecs);
+    }
+    if (!sendoffRunning && sendoffCurrentRep === 1 && sendoffRemainingSecs === sendoffCycleSecs) {
+      setSendoffIsPrep(true);
+      setSendoffPrepSecs(5);
+    }
+    setSendoffRunning(!sendoffRunning);
+  };
+
+  const handleResetSendoff = () => {
+    setSendoffRunning(false);
+    setSendoffCompleted(false);
+    setSendoffIsPrep(false);
+    setSendoffPrepSecs(5);
+    setSendoffCurrentRep(1);
+    setSendoffRemainingSecs(sendoffCycleSecs);
+  };
+
+  const handleSkipNextRep = () => {
+    if (sendoffCurrentRep < sendoffRepsTotal) {
+      setSendoffCurrentRep((prev) => prev + 1);
+      setSendoffRemainingSecs(sendoffCycleSecs);
+      if (sendoffSound) playStartHorn();
+    }
+  };
+
+  const handleSkipPrevRep = () => {
+    if (sendoffCurrentRep > 1) {
+      setSendoffCurrentRep((prev) => prev - 1);
+      setSendoffRemainingSecs(sendoffCycleSecs);
+    }
+  };
+
+  const handleLoadWorkoutSetIntoSendoff = (w: WorkoutSet) => {
+    const pb = selectedSwimmer.pbs[w.stroke]?.[w.distance];
+    let cycle = 60;
+    if (pb) {
+      const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age);
+      const zData = p.zones.find((z) => z.config.code === w.zone);
+      if (zData) {
+        const rest = w.customRestSecs ?? zData.restSecs;
+        cycle = Math.ceil((zData.paceTime + rest) / 5) * 5;
+      }
+    }
+    setSendoffRepsTotal(w.reps);
+    setSendoffCycleSecs(cycle);
+    setSendoffRemainingSecs(cycle);
+    setSendoffCurrentRep(1);
+    setSendoffCompleted(false);
+    setSendoffIsPrep(false);
+  };
+
+  // Stopwatch handlers
   const handleResetTimer = () => {
     setTimerRunning(false);
     setTimerSeconds(0);
@@ -139,7 +283,7 @@ export const PoolsideView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg font-black text-white">Modo Borde de Pileta</h2>
-            <p className="text-xs text-slate-400">Lectura rápida y cronometraje</p>
+            <p className="text-xs text-slate-400">Control visual y sonoro a pie de pileta</p>
           </div>
         </div>
 
@@ -152,100 +296,414 @@ export const PoolsideView: React.FC = () => {
         </button>
       </div>
 
-      {/* Mode Switcher Tabs */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+      {/* Mode Switcher Tabs (3 Modes) */}
+      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
         <button
           onClick={() => setTimerMode('single')}
-          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
             timerMode === 'single'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Timer className="w-4 h-4" />
+          <Timer className="w-3.5 h-3.5" />
           Individual
         </button>
 
         <button
           onClick={() => setTimerMode('multi')}
-          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
             timerMode === 'multi'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Users className="w-4 h-4" />
-          Multi-Andarivel ({lanes.length})
+          <Users className="w-3.5 h-3.5" />
+          Multi ({lanes.length})
+        </button>
+
+        <button
+          onClick={() => {
+            initAudio();
+            setTimerMode('sendoff');
+          }}
+          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
+            timerMode === 'sendoff'
+              ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <AlarmClock className="w-3.5 h-3.5" />
+          Reloj Salidas
         </button>
       </div>
 
-      {/* Main Stopwatch Clock Display (Shared) */}
-      <div className="bg-slate-950 border-2 border-cyan-500/40 rounded-3xl p-5 shadow-2xl text-center">
-        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest block mb-1">
-          {timerMode === 'single' ? 'Cronómetro Principal' : 'Largada Conjunta / Master'}
-        </span>
-        <div className="text-5xl font-black font-mono text-white tracking-tight my-2">
-          {formatTime(timerSeconds)}
-        </div>
+      {/* ============================================================== */}
+      {/* MODE 1 & 2: TRADITIONAL STOPWATCH CLOCK (Shared by Single & Multi) */}
+      {/* ============================================================== */}
+      {timerMode !== 'sendoff' && (
+        <div className="bg-slate-950 border-2 border-cyan-500/40 rounded-3xl p-5 shadow-2xl text-center">
+          <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest block mb-1">
+            {timerMode === 'single' ? 'Cronómetro Principal' : 'Largada Conjunta / Master'}
+          </span>
+          <div className="text-5xl font-black font-mono text-white tracking-tight my-2">
+            {formatTime(timerSeconds)}
+          </div>
 
-        {/* Stopwatch Controls */}
-        <div className="flex items-center justify-center gap-3 mt-4">
-          <button
-            onClick={() => {
-              handleResetTimer();
-              if (timerMode === 'multi') handleResetAllMultiLaps();
-            }}
-            className="p-3 rounded-2xl bg-slate-800 text-slate-400 hover:text-white active:scale-95 transition-all"
-            title="Reiniciar cronómetro a 00:00"
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => setTimerRunning(!timerRunning)}
-            className={`px-8 py-3.5 rounded-2xl font-black text-base flex items-center gap-2 shadow-lg active:scale-95 transition-all ${
-              timerRunning
-                ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
-            }`}
-          >
-            {timerRunning ? (
-              <>
-                <Pause className="w-5 h-5 fill-current" />
-                PAUSAR
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5 fill-current" />
-                LARGADA
-              </>
-            )}
-          </button>
-
-          {timerMode === 'single' && (
+          {/* Stopwatch Controls */}
+          <div className="flex items-center justify-center gap-3 mt-4">
             <button
-              onClick={handleSingleLap}
-              disabled={!timerRunning}
-              className="px-5 py-3 rounded-2xl bg-slate-800 disabled:opacity-40 text-cyan-300 font-bold text-xs hover:bg-slate-700 active:scale-95 transition-all"
+              onClick={() => {
+                handleResetTimer();
+                if (timerMode === 'multi') handleResetAllMultiLaps();
+              }}
+              className="p-3 rounded-2xl bg-slate-800 text-slate-400 hover:text-white active:scale-95 transition-all"
+              title="Reiniciar cronómetro a 00:00"
             >
-              LAP
+              <RotateCcw className="w-5 h-5" />
             </button>
+
+            <button
+              onClick={() => setTimerRunning(!timerRunning)}
+              className={`px-8 py-3.5 rounded-2xl font-black text-base flex items-center gap-2 shadow-lg active:scale-95 transition-all ${
+                timerRunning
+                  ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+              }`}
+            >
+              {timerRunning ? (
+                <>
+                  <Pause className="w-5 h-5 fill-current" />
+                  PAUSAR
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5 fill-current" />
+                  LARGADA
+                </>
+              )}
+            </button>
+
+            {timerMode === 'single' && (
+              <button
+                onClick={handleSingleLap}
+                disabled={!timerRunning}
+                className="px-5 py-3 rounded-2xl bg-slate-800 disabled:opacity-40 text-cyan-300 font-bold text-xs hover:bg-slate-700 active:scale-95 transition-all"
+              >
+                LAP
+              </button>
+            )}
+          </div>
+
+          {/* Recent Laps for Single Mode */}
+          {timerMode === 'single' && singleLaps.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-slate-900 flex gap-2 overflow-x-auto text-xs justify-center">
+              {singleLaps.slice(0, 4).map((lap, i) => (
+                <span key={i} className="bg-slate-900 px-2 py-1 rounded font-mono text-slate-300">
+                  L{singleLaps.length - i}: <strong>{formatTime(lap)}</strong>
+                </span>
+              ))}
+            </div>
           )}
         </div>
+      )}
 
-        {/* Recent Laps for Single Mode */}
-        {timerMode === 'single' && singleLaps.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-900 flex gap-2 overflow-x-auto text-xs justify-center">
-            {singleLaps.slice(0, 4).map((lap, i) => (
-              <span key={i} className="bg-slate-900 px-2 py-1 rounded font-mono text-slate-300">
-                L{singleLaps.length - i}: <strong>{formatTime(lap)}</strong>
+      {/* ============================================================== */}
+      {/* MODE 3: RELOJ DE SALIDAS (INTERVAL / SEND-OFF TIMER WITH AUDIO) */}
+      {/* ============================================================== */}
+      {timerMode === 'sendoff' && (
+        <div className="space-y-3">
+          {/* Main Giant Interval Display Card */}
+          <div className="bg-slate-950 border-2 border-amber-500/40 rounded-3xl p-5 shadow-2xl text-center relative overflow-hidden">
+            {/* Top Bar inside card: Status & Mute */}
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                <AlarmClock className="w-3.5 h-3.5" />
+                Reloj de Salidas
               </span>
-            ))}
-          </div>
-        )}
-      </div>
 
+              <button
+                type="button"
+                onClick={() => {
+                  initAudio();
+                  setSendoffSound(!sendoffSound);
+                }}
+                className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-semibold border transition-all ${
+                  sendoffSound
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    : 'bg-slate-900 text-slate-500 border-slate-800'
+                }`}
+                title={sendoffSound ? 'Bip de salida activado' : 'Bip silenciado'}
+              >
+                {sendoffSound ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span>{sendoffSound ? 'Bip ON' : 'Mudo'}</span>
+              </button>
+            </div>
+
+            {/* Repetition Indicator */}
+            <div className="my-1">
+              {sendoffCompleted ? (
+                <div className="text-emerald-400 font-black text-xl flex items-center justify-center gap-2 animate-bounce">
+                  <Sparkles className="w-5 h-5" />
+                  ¡SERIE COMPLETADA!
+                </div>
+              ) : sendoffIsPrep ? (
+                <div className="text-amber-400 font-bold text-sm tracking-wider animate-pulse">
+                  PREPARADOS PARA LARGAR...
+                </div>
+              ) : (
+                <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">
+                  Repetición <span className="text-amber-300 font-mono text-base font-black">{sendoffCurrentRep}</span> de{' '}
+                  <span className="text-white font-mono text-base">{sendoffRepsTotal}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Giant Countdown Time */}
+            <div
+              className={`text-6xl font-black font-mono tracking-tight my-2 transition-colors ${
+                sendoffCompleted
+                  ? 'text-emerald-400'
+                  : sendoffIsPrep
+                  ? 'text-amber-400 animate-pulse'
+                  : sendoffRemainingSecs <= 3 && sendoffRunning
+                  ? 'text-rose-400 animate-ping'
+                  : 'text-white'
+              }`}
+            >
+              {sendoffIsPrep ? `00:0${sendoffPrepSecs}` : formatTime(sendoffRemainingSecs)}
+            </div>
+
+            {/* Progress Bar of Current Cycle */}
+            {!sendoffIsPrep && (
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden my-3 border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-cyan-400 transition-all duration-1000 ease-linear rounded-full"
+                  style={{
+                    width: `${((sendoffCycleSecs - sendoffRemainingSecs) / sendoffCycleSecs) * 100}%`,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Cycle info subtext */}
+            <div className="text-xs text-slate-400 flex items-center justify-center gap-2 mb-3">
+              <span>Salida cada:</span>
+              <strong className="text-amber-300 font-mono text-sm">{formatTime(sendoffCycleSecs)}</strong>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={handleSkipPrevRep}
+                disabled={sendoffCurrentRep <= 1 || sendoffIsPrep}
+                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-30 active:scale-95 transition-all"
+                title="Repetición anterior"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleResetSendoff}
+                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white active:scale-95 transition-all"
+                title="Reiniciar serie"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleStartSendoff}
+                className={`px-8 py-3.5 rounded-2xl font-black text-base flex items-center gap-2 shadow-lg active:scale-95 transition-all ${
+                  sendoffRunning
+                    ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30'
+                    : 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/30'
+                }`}
+              >
+                {sendoffRunning ? (
+                  <>
+                    <Pause className="w-5 h-5 fill-current" />
+                    PAUSAR
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 fill-current" />
+                    {sendoffCompleted ? 'REPETIR' : 'INICIAR'}
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleSkipNextRep}
+                disabled={sendoffCurrentRep >= sendoffRepsTotal || sendoffIsPrep}
+                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-30 active:scale-95 transition-all"
+                title="Siguiente repetición"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Configurator Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-800">
+              <Clock className="w-4 h-4 text-amber-400" />
+              Configurar Serie y Salidas
+            </h3>
+
+            {/* Reps and Interval Adjusters */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Cantidad de Reps
+                </label>
+                <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+                  <button
+                    type="button"
+                    disabled={sendoffRunning}
+                    onClick={() => {
+                      const n = Math.max(1, sendoffRepsTotal - 1);
+                      setSendoffRepsTotal(n);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    disabled={sendoffRunning}
+                    value={sendoffRepsTotal}
+                    onChange={(e) => setSendoffRepsTotal(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full text-center bg-transparent text-white font-mono font-bold text-sm focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={sendoffRunning}
+                    onClick={() => setSendoffRepsTotal(sendoffRepsTotal + 1)}
+                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Ciclo de Salida (Seg)
+                </label>
+                <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+                  <button
+                    type="button"
+                    disabled={sendoffRunning}
+                    onClick={() => {
+                      const n = Math.max(10, sendoffCycleSecs - 5);
+                      setSendoffCycleSecs(n);
+                      setSendoffRemainingSecs(n);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    step={5}
+                    min={10}
+                    max={600}
+                    disabled={sendoffRunning}
+                    value={sendoffCycleSecs}
+                    onChange={(e) => {
+                      const n = Math.max(5, parseInt(e.target.value) || 30);
+                      setSendoffCycleSecs(n);
+                      setSendoffRemainingSecs(n);
+                    }}
+                    className="w-full text-center bg-transparent text-amber-300 font-mono font-bold text-sm focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={sendoffRunning}
+                    onClick={() => {
+                      const n = sendoffCycleSecs + 5;
+                      setSendoffCycleSecs(n);
+                      setSendoffRemainingSecs(n);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick interval buttons */}
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                Ciclos rápidos habituales:
+              </span>
+              <div className="grid grid-cols-4 gap-1.5 text-xs">
+                {[
+                  { label: 'c/ 45s', secs: 45 },
+                  { label: 'c/ 50s', secs: 50 },
+                  { label: 'c/ 1:00', secs: 60 },
+                  { label: 'c/ 1:15', secs: 75 },
+                  { label: 'c/ 1:30', secs: 90 },
+                  { label: 'c/ 1:40', secs: 100 },
+                  { label: 'c/ 1:45', secs: 105 },
+                  { label: 'c/ 2:00', secs: 120 },
+                ].map((item) => (
+                  <button
+                    key={item.secs}
+                    type="button"
+                    disabled={sendoffRunning}
+                    onClick={() => {
+                      setSendoffCycleSecs(item.secs);
+                      setSendoffRemainingSecs(item.secs);
+                    }}
+                    className={`py-1.5 rounded-lg font-mono text-[11px] font-bold transition-all ${
+                      sendoffCycleSecs === item.secs
+                        ? 'bg-amber-400 text-slate-950 font-black'
+                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Shortcut: Load from active workout in the board */}
+            {workouts.length > 0 && (
+              <div className="pt-2 border-t border-slate-800/80">
+                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider block mb-1">
+                  Cargar desde el Pizarrón de hoy:
+                </span>
+                <div className="space-y-1.5">
+                  {workouts.slice(0, 3).map((w, idx) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      disabled={sendoffRunning}
+                      onClick={() => handleLoadWorkoutSetIntoSendoff(w)}
+                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-left text-xs flex items-center justify-between text-slate-300 hover:text-white transition-all"
+                    >
+                      <span className="font-semibold truncate">
+                        #{idx + 1}. {w.reps} x {w.distance}m {w.stroke}
+                      </span>
+                      <span className="text-cyan-400 font-mono text-[11px] font-bold flex-shrink-0 ml-2">
+                        {w.reps} reps
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
       {/* MODE 1: SINGLE SWIMMER PACE CARDS */}
+      {/* ============================================================== */}
       {timerMode === 'single' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -333,7 +791,9 @@ export const PoolsideView: React.FC = () => {
         </div>
       )}
 
+      {/* ============================================================== */}
       {/* MODE 2: MULTI-LANE STOPWATCH */}
+      {/* ============================================================== */}
       {timerMode === 'multi' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">

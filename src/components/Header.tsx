@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSwim } from '../context/SwimContext';
-import { RefreshCw, Activity, Camera, Loader2, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Activity, Camera, Loader2, ShieldCheck, ArrowRightLeft } from 'lucide-react';
 import { calculateMaxHR } from '../utils/swimCalculations';
 import { processProfileImage } from '../utils/imageUtils';
 import { SwimmerAvatar } from './SwimmerAvatar';
@@ -8,9 +8,10 @@ import { SwimmerAvatar } from './SwimmerAvatar';
 interface HeaderProps {
   onOpenInfo: () => void;
   onOpenBackup?: () => void;
+  onOpenConverter?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenInfo, onOpenBackup }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenInfo, onOpenBackup, onOpenConverter }) => {
   const {
     swimmers,
     selectedSwimmerId,
@@ -122,6 +123,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInfo, onOpenBackup }) => {
             <Activity className="w-3 h-3 text-red-400 animate-pulse" />
             <span>{maxHR}</span>
           </div>
+
+          {/* Converter Button */}
+          {onOpenConverter && (
+            <button
+              onClick={onOpenConverter}
+              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Conversor de Piletas (25m / 50m / Yardas)"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 text-amber-400" />
+            </button>
+          )}
 
           {/* Backup Button */}
           {onOpenBackup && (

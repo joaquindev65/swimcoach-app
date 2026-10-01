@@ -17,10 +17,15 @@ import {
   Share2,
   Clock,
   Sparkles,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { SwimmerAvatar } from '../components/SwimmerAvatar';
 
-export const PacesView: React.FC = () => {
+interface PacesViewProps {
+  onOpenConverter?: () => void;
+}
+
+export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
   const { selectedSwimmer, updatePB, addWorkoutSet } = useSwim();
   const [selectedStroke, setSelectedStroke] = useState<StrokeType>('LIBRE');
   const [selectedDistance, setSelectedDistance] = useState<number>(100);
@@ -163,13 +168,26 @@ export const PacesView: React.FC = () => {
               </h2>
             </div>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold hover:bg-cyan-500/25 active:scale-95 transition-all"
-          >
-            <Clock className="w-3.5 h-3.5" />
-            {currentPB ? 'Editar Marca' : 'Cargar Marca'}
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            {onOpenConverter && (
+              <button
+                onClick={onOpenConverter}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-amber-300 text-xs font-bold active:scale-95 transition-all shadow-sm"
+                title="Convertir tiempos entre 25m, 50m y Yardas"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">25m/50m</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold hover:bg-cyan-500/25 active:scale-95 transition-all"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              {currentPB ? 'Editar' : 'Cargar'}
+            </button>
+          </div>
         </div>
 
         {currentPB ? (
