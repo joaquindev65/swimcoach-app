@@ -30,7 +30,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
     },
     {
       id: 'swimmers' as NavTab,
-      label: 'Equipo',
+      label: 'Nadadores',
       icon: Users,
       badge: null,
     },

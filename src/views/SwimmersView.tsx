@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useSwim } from '../context/SwimContext';
 import { calculateMaxHR } from '../utils/swimCalculations';
 import { processProfileImage } from '../utils/imageUtils';
@@ -14,6 +14,7 @@ import {
   Check,
   Camera,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import type { Swimmer } from '../types/swim';
 
@@ -36,16 +37,11 @@ export const SwimmersView: React.FC = () => {
   const [formCategory, setFormCategory] = useState('Primera');
   const [formNotes, setFormNotes] = useState('');
   const [formPhotoUrl, setFormPhotoUrl] = useState<string | undefined>(undefined);
-  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [isProcessingModalPhoto, setIsProcessingModalPhoto] = useState(false);
+  const [modalPhotoError, setModalPhotoError] = useState<string | null>(null);
 
-  // Card fast-upload state
+  // Card fast-upload loading state
   const [uploadingSwimmerId, setUploadingSwimmerId] = useState<string | null>(null);
-  const [cardUploadTargetId, setCardUploadTargetId] = useState<string | null>(null);
-
-  // File input refs
-  const modalFileInputRef = useRef<HTMLInputElement>(null);
-  const cardFileInputRef = useRef<HTMLInputElement>(null);
 
   const openCreateModal = () => {
     setEditingSwimmer(null);
@@ -54,7 +50,7 @@ export const SwimmersView: React.FC = () => {
     setFormCategory('Primera');
     setFormNotes('');
     setFormPhotoUrl(undefined);
-    setPhotoError(null);
+    setModalPhotoError(null);
     setIsModalOpen(true);
   };
 
@@ -65,7 +61,7 @@ export const SwimmersView: React.FC = () => {
     setFormCategory(swimmer.category || '');
     setFormNotes(swimmer.notes || '');
     setFormPhotoUrl(swimmer.photoUrl);
-    setPhotoError(null);
+    setModalPhotoError(null);
     setIsModalOpen(true);
   };
 
@@ -73,40 +69,32 @@ export const SwimmersView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsProcessingPhoto(true);
-    setPhotoError(null);
+    setIsProcessingModalPhoto(true);
+    setModalPhotoError(null);
 
     try {
       const dataUrl = await processProfileImage(file, { targetSize: 320, quality: 0.82 });
       setFormPhotoUrl(dataUrl);
     } catch (err: any) {
-      setPhotoError(err.message || 'Error al procesar la foto');
+      setModalPhotoError(err.message || 'Error al procesar la foto');
     } finally {
-      setIsProcessingPhoto(false);
+      setIsProcessingModalPhoto(false);
       if (e.target) e.target.value = '';
     }
   };
 
-  const handleCardUploadClick = (swimmerId: string) => {
-    setCardUploadTargetId(swimmerId);
-    cardFileInputRef.current?.click();
-  };
-
-  const handleCardFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDirectCardUpload = async (swimmerId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !cardUploadTargetId) return;
+    if (!file) return;
 
-    const targetId = cardUploadTargetId;
-    setUploadingSwimmerId(targetId);
-
+    setUploadingSwimmerId(swimmerId);
     try {
       const dataUrl = await processProfileImage(file, { targetSize: 320, quality: 0.82 });
-      updateSwimmer(targetId, { photoUrl: dataUrl });
+      updateSwimmer(swimmerId, { photoUrl: dataUrl });
     } catch (err: any) {
-      alert(err.message || 'Error al procesar la foto.');
+      alert(err.message || 'No se pudo cargar la imagen. Intenta con otra foto.');
     } finally {
       setUploadingSwimmerId(null);
-      setCardUploadTargetId(null);
       if (e.target) e.target.value = '';
     }
   };
@@ -138,20 +126,11 @@ export const SwimmersView: React.FC = () => {
 
   return (
     <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
-      {/* Hidden file input for fast upload from cards */}
-      <input
-        ref={cardFileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleCardFileChange}
-        className="hidden"
-      />
-
       {/* Header and Add button */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black text-white">Plantel de Nadadores</h2>
-          <p className="text-xs text-slate-400">Administra a tus atletas, fotos y perfiles</p>
+          <p className="text-xs text-slate-400">Toca la foto o el botón para cargar imagen</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -192,16 +171,30 @@ export const SwimmersView: React.FC = () => {
               )}
 
               <div className="flex items-start gap-3">
-                <SwimmerAvatar
-                  name={s.name}
-                  photoUrl={s.photoUrl}
-                  size="md"
-                  shape="rounded-2xl"
-                  border={isSelected}
-                  showUploadBadge={true}
-                  onUploadClick={() => handleCardUploadClick(s.id)}
-                  isUploading={uploadingSwimmerId === s.id}
-                />
+                {/* Clickable Avatar directly uploads photo via native label */}
+                <label
+                  htmlFor={`card-avatar-input-${s.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="cursor-pointer relative block flex-shrink-0 group"
+                  title="Toca para cambiar la foto"
+                >
+                  <SwimmerAvatar
+                    name={s.name}
+                    photoUrl={s.photoUrl}
+                    size="md"
+                    shape="rounded-2xl"
+                    border={isSelected}
+                    showUploadBadge={true}
+                    isUploading={uploadingSwimmerId === s.id}
+                  />
+                  <input
+                    id={`card-avatar-input-${s.id}`}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => handleDirectCardUpload(s.id, e)}
+                  />
+                </label>
 
                 <div className="flex-1 min-w-0 pr-12">
                   <h3 className="font-bold text-white text-base truncate">{s.name}</h3>
@@ -236,17 +229,27 @@ export const SwimmersView: React.FC = () => {
 
               {/* Action buttons */}
               <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-slate-800/40">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCardUploadClick(s.id);
-                  }}
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-cyan-400 transition-colors"
+                {/* Native label button to trigger file picker directly */}
+                <label
+                  htmlFor={`card-btn-input-${s.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-750 text-cyan-300 text-xs font-semibold cursor-pointer active:scale-95 transition-all border border-slate-700/60"
+                  title="Subir o cambiar foto del atleta"
                 >
-                  <Camera className="w-3.5 h-3.5" />
+                  {uploadingSwimmerId === s.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                  ) : (
+                    <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                  )}
                   <span>{s.photoUrl ? 'Cambiar foto' : 'Subir foto'}</span>
-                </button>
+                  <input
+                    id={`card-btn-input-${s.id}`}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(e) => handleDirectCardUpload(s.id, e)}
+                  />
+                </label>
 
                 <div className="flex items-center gap-1">
                   <button
@@ -255,7 +258,7 @@ export const SwimmersView: React.FC = () => {
                       openEditModal(s);
                     }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition-colors"
-                    title="Editar nadador"
+                    title="Editar atleta"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -302,43 +305,53 @@ export const SwimmersView: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Photo Upload Area */}
               <div className="flex flex-col items-center justify-center p-3.5 bg-slate-950/60 rounded-2xl border border-slate-800/80">
-                <SwimmerAvatar
-                  name={formName || 'Atleta'}
-                  photoUrl={formPhotoUrl}
-                  size="xl"
-                  shape="rounded-2xl"
-                  border={true}
-                  isUploading={isProcessingPhoto}
-                  className="mb-2.5"
-                />
-
-                <input
-                  ref={modalFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleModalPhotoChange}
-                  className="hidden"
-                />
+                <label
+                  htmlFor="modal-photo-upload-input"
+                  className="cursor-pointer relative block group mb-2.5"
+                  title="Toca para seleccionar foto"
+                >
+                  <SwimmerAvatar
+                    name={formName || 'Atleta'}
+                    photoUrl={formPhotoUrl}
+                    size="xl"
+                    shape="rounded-2xl"
+                    border={true}
+                    isUploading={isProcessingModalPhoto}
+                  />
+                  <div className="absolute inset-0 bg-slate-950/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </label>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => modalFileInputRef.current?.click()}
-                    disabled={isProcessingPhoto}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-semibold text-xs rounded-xl border border-cyan-500/30 transition-all active:scale-95 disabled:opacity-50"
+                  <label
+                    htmlFor="modal-photo-upload-input"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-semibold text-xs rounded-xl border border-cyan-500/30 transition-all active:scale-95 cursor-pointer"
                   >
-                    <Camera className="w-3.5 h-3.5" />
-                    {formPhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
-                  </button>
+                    {isProcessingModalPhoto ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Camera className="w-3.5 h-3.5" />
+                    )}
+                    <span>{formPhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}</span>
+                    <input
+                      id="modal-photo-upload-input"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handleModalPhotoChange}
+                      disabled={isProcessingModalPhoto}
+                    />
+                  </label>
 
                   {formPhotoUrl && (
                     <button
                       type="button"
                       onClick={() => {
                         setFormPhotoUrl(undefined);
-                        setPhotoError(null);
+                        setModalPhotoError(null);
                       }}
-                      disabled={isProcessingPhoto}
+                      disabled={isProcessingModalPhoto}
                       className="flex items-center gap-1 px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 text-red-400 font-semibold text-xs rounded-xl border border-red-800/40 transition-all active:scale-95 disabled:opacity-50"
                       title="Quitar foto"
                     >
@@ -348,15 +361,15 @@ export const SwimmersView: React.FC = () => {
                   )}
                 </div>
 
-                {photoError && (
+                {modalPhotoError && (
                   <div className="mt-2 text-[11px] text-red-400 flex items-center gap-1 text-center px-2">
                     <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>{photoError}</span>
+                    <span>{modalPhotoError}</span>
                   </div>
                 )}
 
                 <span className="text-[10px] text-slate-500 mt-2 text-center">
-                  Cámara o archivo (JPG, PNG). Se optimiza automáticamente en 1:1.
+                  Cámara o galería (JPG, PNG). Se optimiza automáticamente en 1:1.
                 </span>
               </div>
 
