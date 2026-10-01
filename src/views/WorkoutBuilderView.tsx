@@ -16,6 +16,7 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { SwimmerAvatar } from '../components/SwimmerAvatar';
 
 export const WorkoutBuilderView: React.FC = () => {
   const { selectedSwimmer, workouts, addWorkoutSet, removeWorkoutSet, clearWorkout } = useSwim();
@@ -88,11 +89,19 @@ export const WorkoutBuilderView: React.FC = () => {
     <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
       {/* Header with Volume and Share */}
       <div className="flex items-center justify-between">
-        <div>
-          <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
-            Planificador
-          </span>
-          <h2 className="text-lg font-black text-white">Pizarrón del Entrenador</h2>
+        <div className="flex items-center gap-2.5">
+          <SwimmerAvatar
+            name={selectedSwimmer.name}
+            photoUrl={selectedSwimmer.photoUrl}
+            size="sm"
+            shape="rounded-xl"
+          />
+          <div>
+            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+              Plan para {selectedSwimmer.name.split(' ')[0]}
+            </span>
+            <h2 className="text-base font-black text-white leading-tight">Pizarrón del Entrenador</h2>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

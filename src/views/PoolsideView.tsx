@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSwim } from '../context/SwimContext';
 import { calculatePacesForDistance, formatTime } from '../utils/swimCalculations';
 import { Play, Pause, RotateCcw, Flame, Heart, Maximize, Minimize } from 'lucide-react';
+import { SwimmerAvatar } from '../components/SwimmerAvatar';
 
 export const PoolsideView: React.FC = () => {
   const { selectedSwimmer, workouts } = useSwim();
@@ -133,12 +134,22 @@ export const PoolsideView: React.FC = () => {
       {/* Giant Target Pace Cards for Current Swimmer */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Tiempos Clave de {selectedSwimmer.name.split(' ')[0]}
-          </h3>
-          <span className="text-[10px] text-cyan-400 font-bold">
-            FCM: {220 - selectedSwimmer.age} bpm
-          </span>
+          <div className="flex items-center gap-2">
+            <SwimmerAvatar
+              name={selectedSwimmer.name}
+              photoUrl={selectedSwimmer.photoUrl}
+              size="sm"
+              shape="rounded-xl"
+            />
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Tiempos Clave de {selectedSwimmer.name.split(' ')[0]}
+              </h3>
+              <span className="text-[10px] text-cyan-400 font-bold block">
+                FCM: {220 - selectedSwimmer.age} bpm
+              </span>
+            </div>
+          </div>
         </div>
 
         {workouts.length === 0 ? (

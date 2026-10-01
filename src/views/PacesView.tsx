@@ -18,6 +18,7 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
+import { SwimmerAvatar } from '../components/SwimmerAvatar';
 
 export const PacesView: React.FC = () => {
   const { selectedSwimmer, updatePB, addWorkoutSet } = useSwim();
@@ -146,13 +147,21 @@ export const PacesView: React.FC = () => {
         <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">
-              Prueba Seleccionada
-            </span>
-            <h2 className="text-xl font-black text-white flex items-center gap-1.5">
-              {currentDistance}m {selectedStroke}
-            </h2>
+          <div className="flex items-center gap-2.5">
+            <SwimmerAvatar
+              name={selectedSwimmer.name}
+              photoUrl={selectedSwimmer.photoUrl}
+              size="sm"
+              shape="rounded-xl"
+            />
+            <div>
+              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">
+                {selectedSwimmer.name} • {selectedStroke}
+              </span>
+              <h2 className="text-xl font-black text-white flex items-center gap-1.5">
+                {currentDistance}m {selectedStroke}
+              </h2>
+            </div>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}

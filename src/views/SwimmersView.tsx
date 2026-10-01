@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSwim } from '../context/SwimContext';
 import { calculateMaxHR } from '../utils/swimCalculations';
-import { UserPlus, UserCheck, Trash2, Edit2, Activity, Trophy, X, Check } from 'lucide-react';
+import { processProfileImage } from '../utils/imageUtils';
+import { SwimmerAvatar } from '../components/SwimmerAvatar';
+import {
+  UserPlus,
+  UserCheck,
+  Trash2,
+  Edit2,
+  Activity,
+  Trophy,
+  X,
+  Check,
+  Camera,
+  AlertCircle,
+} from 'lucide-react';
 import type { Swimmer } from '../types/swim';
 
 export const SwimmersView: React.FC = () => {
@@ -22,6 +35,17 @@ export const SwimmersView: React.FC = () => {
   const [formAge, setFormAge] = useState(25);
   const [formCategory, setFormCategory] = useState('Primera');
   const [formNotes, setFormNotes] = useState('');
+  const [formPhotoUrl, setFormPhotoUrl] = useState<string | undefined>(undefined);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // Card fast-upload state
+  const [uploadingSwimmerId, setUploadingSwimmerId] = useState<string | null>(null);
+  const [cardUploadTargetId, setCardUploadTargetId] = useState<string | null>(null);
+
+  // File input refs
+  const modalFileInputRef = useRef<HTMLInputElement>(null);
+  const cardFileInputRef = useRef<HTMLInputElement>(null);
 
   const openCreateModal = () => {
     setEditingSwimmer(null);
@@ -29,6 +53,8 @@ export const SwimmersView: React.FC = () => {
     setFormAge(25);
     setFormCategory('Primera');
     setFormNotes('');
+    setFormPhotoUrl(undefined);
+    setPhotoError(null);
     setIsModalOpen(true);
   };
 
@@ -38,7 +64,51 @@ export const SwimmersView: React.FC = () => {
     setFormAge(swimmer.age);
     setFormCategory(swimmer.category || '');
     setFormNotes(swimmer.notes || '');
+    setFormPhotoUrl(swimmer.photoUrl);
+    setPhotoError(null);
     setIsModalOpen(true);
+  };
+
+  const handleModalPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      const dataUrl = await processProfileImage(file, { targetSize: 320, quality: 0.82 });
+      setFormPhotoUrl(dataUrl);
+    } catch (err: any) {
+      setPhotoError(err.message || 'Error al procesar la foto');
+    } finally {
+      setIsProcessingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleCardUploadClick = (swimmerId: string) => {
+    setCardUploadTargetId(swimmerId);
+    cardFileInputRef.current?.click();
+  };
+
+  const handleCardFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !cardUploadTargetId) return;
+
+    const targetId = cardUploadTargetId;
+    setUploadingSwimmerId(targetId);
+
+    try {
+      const dataUrl = await processProfileImage(file, { targetSize: 320, quality: 0.82 });
+      updateSwimmer(targetId, { photoUrl: dataUrl });
+    } catch (err: any) {
+      alert(err.message || 'Error al procesar la foto.');
+    } finally {
+      setUploadingSwimmerId(null);
+      setCardUploadTargetId(null);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,6 +121,7 @@ export const SwimmersView: React.FC = () => {
         age: formAge,
         category: formCategory.trim(),
         notes: formNotes.trim(),
+        photoUrl: formPhotoUrl,
       });
     } else {
       addSwimmer({
@@ -58,6 +129,7 @@ export const SwimmersView: React.FC = () => {
         age: formAge,
         category: formCategory.trim(),
         notes: formNotes.trim(),
+        photoUrl: formPhotoUrl,
         pbs: {},
       });
     }
@@ -66,11 +138,20 @@ export const SwimmersView: React.FC = () => {
 
   return (
     <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
+      {/* Hidden file input for fast upload from cards */}
+      <input
+        ref={cardFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleCardFileChange}
+        className="hidden"
+      />
+
       {/* Header and Add button */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-black text-white">Plantel de Nadadores</h2>
-          <p className="text-xs text-slate-400">Administra a tus atletas y sus perfiles</p>
+          <p className="text-xs text-slate-400">Administra a tus atletas, fotos y perfiles</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -111,9 +192,16 @@ export const SwimmersView: React.FC = () => {
               )}
 
               <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center text-xl font-black text-cyan-300 shadow-inner">
-                  {s.name.charAt(0).toUpperCase()}
-                </div>
+                <SwimmerAvatar
+                  name={s.name}
+                  photoUrl={s.photoUrl}
+                  size="md"
+                  shape="rounded-2xl"
+                  border={isSelected}
+                  showUploadBadge={true}
+                  onUploadClick={() => handleCardUploadClick(s.id)}
+                  isUploading={uploadingSwimmerId === s.id}
+                />
 
                 <div className="flex-1 min-w-0 pr-12">
                   <h3 className="font-bold text-white text-base truncate">{s.name}</h3>
@@ -147,31 +235,45 @@ export const SwimmersView: React.FC = () => {
               </div>
 
               {/* Action buttons */}
-              <div className="mt-3 flex items-center justify-end gap-2 pt-2 border-t border-slate-800/40">
+              <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-slate-800/40">
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openEditModal(s);
+                    handleCardUploadClick(s.id);
                   }}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition-colors"
-                  title="Editar nadador"
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-cyan-400 transition-colors"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>{s.photoUrl ? 'Cambiar foto' : 'Subir foto'}</span>
                 </button>
-                {swimmers.length > 1 && (
+
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`¿Eliminar a ${s.name}?`)) {
-                        deleteSwimmer(s.id);
-                      }
+                      openEditModal(s);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
-                    title="Eliminar nadador"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition-colors"
+                    title="Editar nadador"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                   </button>
-                )}
+                  {swimmers.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`¿Eliminar a ${s.name}?`)) {
+                          deleteSwimmer(s.id);
+                        }
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                      title="Eliminar nadador"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -182,7 +284,7 @@ export const SwimmersView: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
           <div
-            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5"
+            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
@@ -198,6 +300,66 @@ export const SwimmersView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Photo Upload Area */}
+              <div className="flex flex-col items-center justify-center p-3.5 bg-slate-950/60 rounded-2xl border border-slate-800/80">
+                <SwimmerAvatar
+                  name={formName || 'Atleta'}
+                  photoUrl={formPhotoUrl}
+                  size="xl"
+                  shape="rounded-2xl"
+                  border={true}
+                  isUploading={isProcessingPhoto}
+                  className="mb-2.5"
+                />
+
+                <input
+                  ref={modalFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleModalPhotoChange}
+                  className="hidden"
+                />
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => modalFileInputRef.current?.click()}
+                    disabled={isProcessingPhoto}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-semibold text-xs rounded-xl border border-cyan-500/30 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    {formPhotoUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                  </button>
+
+                  {formPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormPhotoUrl(undefined);
+                        setPhotoError(null);
+                      }}
+                      disabled={isProcessingPhoto}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 text-red-400 font-semibold text-xs rounded-xl border border-red-800/40 transition-all active:scale-95 disabled:opacity-50"
+                      title="Quitar foto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Quitar
+                    </button>
+                  )}
+                </div>
+
+                {photoError && (
+                  <div className="mt-2 text-[11px] text-red-400 flex items-center gap-1 text-center px-2">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{photoError}</span>
+                  </div>
+                )}
+
+                <span className="text-[10px] text-slate-500 mt-2 text-center">
+                  Cámara o archivo (JPG, PNG). Se optimiza automáticamente en 1:1.
+                </span>
+              </div>
+
               <div>
                 <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">
                   Nombre y Apellido

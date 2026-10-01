@@ -1,7 +1,8 @@
 import React from 'react';
 import { useSwim } from '../context/SwimContext';
-import { UserCheck, RefreshCw, Activity } from 'lucide-react';
+import { RefreshCw, Activity } from 'lucide-react';
 import { calculateMaxHR } from '../utils/swimCalculations';
+import { SwimmerAvatar } from './SwimmerAvatar';
 
 interface HeaderProps {
   onOpenInfo: () => void;
@@ -28,13 +29,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInfo }) => {
           </div>
         </div>
 
-        {/* Swimmer Quick Switcher */}
+        {/* Swimmer Quick Switcher & Controls */}
         <div className="flex items-center gap-1.5">
-          <div className="relative">
+          <div className="relative flex items-center">
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
+              <SwimmerAvatar
+                name={selectedSwimmer.name}
+                photoUrl={selectedSwimmer.photoUrl}
+                size="xs"
+                shape="rounded-md"
+              />
+            </div>
             <select
               value={selectedSwimmerId}
               onChange={(e) => setSelectedSwimmerId(e.target.value)}
-              className="appearance-none bg-slate-800 text-xs font-semibold text-cyan-300 pl-7 pr-7 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-500 shadow-sm max-w-[155px] truncate"
+              className="appearance-none bg-slate-800 text-xs font-semibold text-cyan-300 pl-8 pr-7 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-500 shadow-sm max-w-[155px] truncate"
             >
               {swimmers.map((s) => (
                 <option key={s.id} value={s.id} className="bg-slate-800 text-white">
@@ -42,7 +51,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenInfo }) => {
                 </option>
               ))}
             </select>
-            <UserCheck className="w-3.5 h-3.5 text-cyan-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
             <span className="text-[10px] text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">▼</span>
           </div>
 
