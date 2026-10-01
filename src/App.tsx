@@ -9,6 +9,7 @@ import { PoolsideView } from './views/PoolsideView';
 import { InfoModal } from './components/InfoModal';
 import { BackupModal } from './components/BackupModal';
 import { PoolConverterModal } from './components/PoolConverterModal';
+import { InstallAppBanner } from './components/InstallAppBanner';
 
 const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('paces');
@@ -32,6 +33,9 @@ const MainApp: React.FC = () => {
         {activeTab === 'poolside' && <PoolsideView />}
         {activeTab === 'swimmers' && <SwimmersView />}
       </main>
+
+      {/* Install Mobile PWA Banner */}
+      <InstallAppBanner />
 
       {/* Mobile Bottom Navigation Bar */}
       <BottomNav activeTab={activeTab} onChangeTab={setActiveTab} />
