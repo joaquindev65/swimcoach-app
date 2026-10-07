@@ -25,15 +25,9 @@ const MainApp: React.FC = () => {
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isConverterOpen, setIsConverterOpen] = useState(false);
 
-  // View mode: 'landing' or 'app'
+  // View mode: 'landing' or 'app' (default to 'app' so users arrive directly at Home)
   const [viewMode, setViewMode] = useState<'app' | 'landing'>(() => {
-    // If explicitly requested in URL hash or search query
-    if (window.location.hash === '#landing' || window.location.search.includes('landing')) {
-      return 'landing';
-    }
-    // Check if new user hasn't seen the landing page yet
-    const seenLanding = localStorage.getItem('swimcoach_seen_landing_v1');
-    if (!seenLanding) {
+    if (window.location.hash === '#landing') {
       return 'landing';
     }
     return 'app';
@@ -108,6 +102,7 @@ const MainApp: React.FC = () => {
             onOpenConverter={() => setIsConverterOpen(true)}
             onOpenBackup={() => setIsBackupOpen(true)}
             onOpenProfile={() => setIsProfileOpen(true)}
+            onOpenInfo={() => setIsInfoOpen(true)}
           />
         )}
         {activeTab === 'swimmers' && <SwimmersView />}
