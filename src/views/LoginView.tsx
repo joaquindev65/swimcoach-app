@@ -10,8 +10,13 @@ import {
 
 import type { UserRole } from '../types/swim';
 
-export const LoginView: React.FC = () => {
+interface LoginViewProps {
+  onOpenLanding?: () => void;
+}
+
+export const LoginView: React.FC<LoginViewProps> = ({ onOpenLanding }) => {
   const { login, swimmers } = useSwim();
+
 
   const [mode, setMode] = useState<'quick' | 'custom'>('quick');
   const [customName, setCustomName] = useState('');
@@ -268,10 +273,25 @@ export const LoginView: React.FC = () => {
         </div>
       </div>
 
+      {/* Landing page link */}
+      {onOpenLanding && (
+        <div className="text-center mt-3">
+          <button
+            type="button"
+            onClick={onOpenLanding}
+            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1.5 py-1 px-3 rounded-xl hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-all"
+          >
+            <span>🌐 Ver Página de Presentación (Landing Page)</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Footer Info */}
-      <p className="text-center text-[10px] text-slate-400 mt-4 font-medium">
+      <p className="text-center text-[10px] text-slate-400 mt-3 font-medium">
         SwimCoach PRO • Almacenamiento Seguro Local • 100% Offline
       </p>
     </div>
   );
 };
+

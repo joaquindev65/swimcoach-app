@@ -10,6 +10,7 @@ import { SwimmersView } from './views/SwimmersView';
 import { WorkoutBuilderView } from './views/WorkoutBuilderView';
 import { PoolsideView } from './views/PoolsideView';
 import { LoginView } from './views/LoginView';
+import { LandingPageView } from './views/LandingPageView';
 import { InfoModal } from './components/InfoModal';
 import { BackupModal } from './components/BackupModal';
 import { PoolConverterModal } from './components/PoolConverterModal';
@@ -24,13 +25,55 @@ const MainApp: React.FC = () => {
   const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isConverterOpen, setIsConverterOpen] = useState(false);
 
-  // If not logged in, show Login and Welcome portal
+  // View mode: 'landing' or 'app'
+  const [viewMode, setViewMode] = useState<'app' | 'landing'>(() => {
+    // If explicitly requested in URL hash or search query
+    if (window.location.hash === '#landing' || window.location.search.includes('landing')) {
+      return 'landing';
+    }
+    // Check if new user hasn't seen the landing page yet
+    const seenLanding = localStorage.getItem('swimcoach_seen_landing_v1');
+    if (!seenLanding) {
+      return 'landing';
+    }
+    return 'app';
+  });
+
+  const handleEnterApp = () => {
+    localStorage.setItem('swimcoach_seen_landing_v1', 'true');
+    setViewMode('app');
+    if (window.location.hash === '#landing') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  const handleEnterSwimmerMode = () => {
+    switchRole('swimmer');
+    handleEnterApp();
+  };
+
+  const handleOpenLanding = () => {
+    setViewMode('landing');
+  };
+
+  // 1. Render Landing Page if active
+  if (viewMode === 'landing') {
+    return (
+      <LandingPageView
+        onEnterApp={handleEnterApp}
+        onEnterSwimmerMode={handleEnterSwimmerMode}
+      />
+    );
+  }
+
+  // 2. If not logged in and in app mode, render Login & Welcome portal
   if (!isLoggedIn) {
-    return <LoginView />;
+    return <LoginView onOpenLanding={handleOpenLanding} />;
   }
 
   const isSwimmerMode = currentUser?.role === 'swimmer';
 
+  // 3. Render Full Web App Workspace
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Top Header */}
@@ -89,6 +132,7 @@ const MainApp: React.FC = () => {
         onOpenBackup={() => setIsBackupOpen(true)}
         onOpenConverter={() => setIsConverterOpen(true)}
         onOpenInfo={() => setIsInfoOpen(true)}
+        onOpenLanding={handleOpenLanding}
       />
 
       {/* User and Club Profile Modal */}

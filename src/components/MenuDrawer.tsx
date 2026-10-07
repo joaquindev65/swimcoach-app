@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Repeat,
   CheckCircle2,
+  Globe,
 } from 'lucide-react';
 import { SwimmerAvatar } from './SwimmerAvatar';
 
@@ -28,7 +29,9 @@ interface MenuDrawerProps {
   onOpenBackup: () => void;
   onOpenConverter: () => void;
   onOpenInfo: () => void;
+  onOpenLanding?: () => void;
 }
+
 
 export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   isOpen,
@@ -39,7 +42,9 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
   onOpenBackup,
   onOpenConverter,
   onOpenInfo,
+  onOpenLanding,
 }) => {
+
   const {
     currentUser,
     switchRole,
@@ -302,9 +307,23 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                 <User className="w-4 h-4 text-cyan-400" />
                 <span>Perfil y Club</span>
               </button>
+
+              {onOpenLanding && (
+                <button
+                  onClick={() => {
+                    onOpenLanding();
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all text-left mt-1"
+                >
+                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <span>Ver Landing Page / Presentación</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
+
 
         {/* Footer Actions */}
         <div className="p-3 border-t border-slate-800 bg-slate-900/95 space-y-2">
