@@ -72,3 +72,18 @@ export interface MultiLaneSlot {
   zone: ZoneCode;
   laps: number[]; // recorded split times in seconds
 }
+
+export type UserRole = 'coach' | 'swimmer';
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email?: string;
+  role: UserRole;
+  clubName: string;
+  title?: string;
+  avatarUrl?: string;
+  swimmerId?: string; // Si el rol es 'swimmer', ID del nadador vinculado
+  createdAt?: string;
+}
+

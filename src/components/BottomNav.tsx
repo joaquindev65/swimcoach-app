@@ -1,7 +1,7 @@
 import React from 'react';
-import { Gauge, Users, ClipboardList, Flame } from 'lucide-react';
+import { Home, Gauge, Users, ClipboardList, Flame } from 'lucide-react';
 
-export type NavTab = 'paces' | 'swimmers' | 'workout' | 'poolside';
+export type NavTab = 'home' | 'swimmers' | 'paces' | 'workout' | 'poolside';
 
 interface BottomNavProps {
   activeTab: NavTab;
@@ -10,6 +10,18 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) => {
   const tabs = [
+    {
+      id: 'home' as NavTab,
+      label: 'Inicio',
+      icon: Home,
+      badge: null,
+    },
+    {
+      id: 'swimmers' as NavTab,
+      label: 'Nadadores',
+      icon: Users,
+      badge: null,
+    },
     {
       id: 'paces' as NavTab,
       label: 'Ritmos',
@@ -28,17 +40,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onChangeTab }) 
       icon: Flame,
       badge: 'LIVE',
     },
-    {
-      id: 'swimmers' as NavTab,
-      label: 'Nadadores',
-      icon: Users,
-      badge: null,
-    },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 safe-bottom shadow-2xl">
-      <div className="max-w-md mx-auto grid grid-cols-4 px-2 py-1.5">
+      <div className="max-w-md mx-auto grid grid-cols-5 px-1 py-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

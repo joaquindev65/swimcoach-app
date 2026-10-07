@@ -1,9 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Swimmer, StrokeType, WorkoutSet, SavedWorkout, WorkoutCategory } from '../types/swim';
+import type {
+  Swimmer,
+  StrokeType,
+  WorkoutSet,
+  SavedWorkout,
+  WorkoutCategory,
+  UserProfile,
+  UserRole,
+} from '../types/swim';
 import { DEFAULT_SWIMMERS } from '../data/defaultSwimmers';
 import { DEFAULT_WORKOUT_TEMPLATES } from '../data/defaultWorkouts';
 
+export const DEFAULT_COACH_PROFILE: UserProfile = {
+  id: 'coach-1',
+  name: 'Coach Joaquín',
+  role: 'coach',
+  clubName: 'Club Natación Competitiva',
+  title: 'Entrenador Principal',
+  createdAt: new Date().toISOString(),
+};
+
 interface SwimContextType {
+  currentUser: UserProfile | null;
+  isLoggedIn: boolean;
+  login: (profile: Partial<UserProfile> & { name: string; role: UserRole }) => void;
+  logout: () => void;
+  updateCurrentUser: (updates: Partial<UserProfile>) => void;
+  switchRole: (role: UserRole, swimmerId?: string) => void;
   swimmers: Swimmer[];
   selectedSwimmerId: string;
   selectedSwimmer: Swimmer;
@@ -30,6 +53,8 @@ const SwimContext = createContext<SwimContextType | undefined>(undefined);
 const STORAGE_KEY_SWIMMERS = 'swimcoach_swimmers_v1';
 const STORAGE_KEY_WORKOUTS = 'swimcoach_workouts_v1';
 const STORAGE_KEY_SAVED_WORKOUTS = 'swimcoach_saved_workouts_v1';
+const STORAGE_KEY_USER = 'swimcoach_user_session_v1';
+
 
 export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [swimmers, setSwimmers] = useState<Swimmer[]>(() => {
@@ -91,6 +116,19 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEFAULT_WORKOUT_TEMPLATES;
   });
 
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_USER);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.name && parsed.role) return parsed;
+      }
+    } catch (e) {
+      console.error('Error loading user session from localStorage', e);
+    }
+    return DEFAULT_COACH_PROFILE;
+  });
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SWIMMERS, JSON.stringify(swimmers));
   }, [swimmers]);
@@ -103,7 +141,71 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(STORAGE_KEY_SAVED_WORKOUTS, JSON.stringify(savedWorkouts));
   }, [savedWorkouts]);
 
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem(STORAGE_KEY_USER);
+    }
+  }, [currentUser]);
+
+  const login = (profile: Partial<UserProfile> & { name: string; role: UserRole }) => {
+    const user: UserProfile = {
+      id: profile.id || (profile.role === 'coach' ? 'coach-' + Date.now() : 'swimmer-' + Date.now()),
+      name: profile.name.trim(),
+      role: profile.role,
+      clubName: profile.clubName?.trim() || 'Club Natación Competitiva',
+      title: profile.title || (profile.role === 'coach' ? 'Entrenador Principal' : 'Nadador Federado'),
+      email: profile.email?.trim(),
+      avatarUrl: profile.avatarUrl,
+      swimmerId: profile.swimmerId,
+      createdAt: new Date().toISOString(),
+    };
+    setCurrentUser(user);
+    if (user.role === 'swimmer' && user.swimmerId) {
+      setSelectedSwimmerId(user.swimmerId);
+    }
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+  };
+
+  const updateCurrentUser = (updates: Partial<UserProfile>) => {
+    setCurrentUser((prev) => (prev ? { ...prev, ...updates } : null));
+  };
+
+  const switchRole = (newRole: UserRole, targetSwimmerId?: string) => {
+    if (newRole === 'swimmer') {
+      const s = swimmers.find((sw) => sw.id === targetSwimmerId) || swimmers[0];
+      const swimmerProfile: UserProfile = {
+        id: 'user-' + (s ? s.id : 'swimmer'),
+        name: s ? s.name : 'Nadador',
+        role: 'swimmer',
+        clubName: currentUser?.clubName || 'Club Natación Competitiva',
+        title: 'Nadador Federado',
+        avatarUrl: s?.photoUrl,
+        swimmerId: s?.id,
+        createdAt: new Date().toISOString(),
+      };
+      setCurrentUser(swimmerProfile);
+      if (s) setSelectedSwimmerId(s.id);
+    } else {
+      const coachProfile: UserProfile = {
+        id: 'coach-1',
+        name: currentUser?.role === 'coach' ? currentUser.name : 'Coach Joaquín',
+        role: 'coach',
+        clubName: currentUser?.clubName || 'Club Natación Competitiva',
+        title: 'Entrenador Principal',
+        avatarUrl: currentUser?.avatarUrl,
+        createdAt: new Date().toISOString(),
+      };
+      setCurrentUser(coachProfile);
+    }
+  };
+
   const selectedSwimmer = swimmers.find((s) => s.id === selectedSwimmerId) || swimmers[0] || DEFAULT_SWIMMERS[0];
+
 
   const addSwimmer = (newSwimmer: Omit<Swimmer, 'id'>) => {
     const id = 'swimmer-' + Date.now();
@@ -281,6 +383,12 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <SwimContext.Provider
       value={{
+        currentUser,
+        isLoggedIn: !!currentUser,
+        login,
+        logout,
+        updateCurrentUser,
+        switchRole,
         swimmers,
         selectedSwimmerId,
         selectedSwimmer,
