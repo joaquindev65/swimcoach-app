@@ -191,9 +191,18 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
                 {selectedSwimmer.age}a
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 truncate">
-              {selectedSwimmer.category || 'Categoría Primera'}
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+              <span>{selectedSwimmer.category || 'Categoría Primera'}</span>
+              {selectedSwimmer.club && (
+                <>
+                  <span>•</span>
+                  <span className="text-cyan-400 font-medium truncate">{selectedSwimmer.club}</span>
+                </>
+              )}
+              {selectedSwimmer.sede && (
+                <span className="text-amber-400 font-medium truncate">📍 {selectedSwimmer.sede}</span>
+              )}
+            </div>
 
             <div className="mt-1 flex items-center gap-2 text-[10px] flex-wrap">
               <span className="text-slate-400">
@@ -231,12 +240,20 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
                   }`}
                 >
                   <SwimmerAvatar name={s.name} photoUrl={s.photoUrl} size="xs" />
-                  <span className="text-xs font-semibold whitespace-nowrap">{s.name}</span>
+                  <div className="text-left">
+                    <span className="text-xs font-semibold whitespace-nowrap block leading-tight">{s.name}</span>
+                    {(s.sede || s.club) && (
+                      <span className="text-[9px] text-slate-400 block truncate max-w-[100px]">
+                        {s.sede || s.club}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
+
 
         {/* Action Buttons for Active Swimmer */}
         <div className="grid grid-cols-2 gap-2 pt-1">

@@ -6,6 +6,8 @@ export const DEFAULT_SWIMMERS: Swimmer[] = [
     name: 'Joaquín (Planilla Coach)',
     age: 33,
     category: 'Master / Primera',
+    club: 'Club Natación Pro',
+    sede: 'Sede Central',
     notes: 'Datos importados directamente de la planilla del entrenador.',
     pbs: {
       LIBRE: {
@@ -43,6 +45,8 @@ export const DEFAULT_SWIMMERS: Swimmer[] = [
     name: 'Sofía Martínez',
     age: 20,
     category: 'Juvenil / Primera',
+    club: 'Club Natación Pro',
+    sede: 'Sede Norte (Olímpica)',
     notes: 'Especialista en Libre medio fondo y Combinado.',
     pbs: {
       LIBRE: {
@@ -66,6 +70,8 @@ export const DEFAULT_SWIMMERS: Swimmer[] = [
     name: 'Lucas Benítez',
     age: 17,
     category: 'Cadete / Juvenil',
+    club: 'Club Náutico',
+    sede: 'Sede Costanera',
     notes: 'Velocista puro (50m y 100m Libre/Mariposa).',
     pbs: {
       LIBRE: {

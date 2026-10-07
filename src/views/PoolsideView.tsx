@@ -848,14 +848,15 @@ export const PoolsideView: React.FC = () => {
                     <select
                       value={lane.swimmerId}
                       onChange={(e) => handleUpdateLane(lane.id, { swimmerId: e.target.value })}
-                      className="bg-slate-950 border border-slate-800 rounded-lg text-xs font-bold text-white px-2 py-1 max-w-[130px] truncate"
+                      className="bg-slate-950 border border-slate-800 rounded-lg text-xs font-bold text-white px-2 py-1 max-w-[150px] truncate"
                     >
                       {swimmers.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}
+                          {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : ''}
                         </option>
                       ))}
                     </select>
+
                   </div>
 
                   {lanes.length > 1 && (

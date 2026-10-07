@@ -91,6 +91,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
                 </h3>
                 <p className="text-[11px] text-cyan-300/90 truncate font-medium">
                   {currentUser?.clubName || 'Club Natación'}
+                  {currentUser?.sede ? ` • ${currentUser.sede}` : ''}
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span
@@ -156,11 +157,12 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({
             >
               {swimmers.map((s) => (
                 <option key={s.id} value={s.id}>
-                  🏊 {s.name} ({s.age} años)
+                  🏊 {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : `(${s.age}a)`}
                 </option>
               ))}
             </select>
           </div>
+
         </div>
 
         {/* Navigation Section */}

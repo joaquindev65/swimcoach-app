@@ -16,7 +16,9 @@ export const LoginView: React.FC = () => {
   const [mode, setMode] = useState<'quick' | 'custom'>('quick');
   const [customName, setCustomName] = useState('');
   const [customClub, setCustomClub] = useState('Club Natación');
+  const [customSede, setCustomSede] = useState('Sede Central');
   const [customRole, setCustomRole] = useState<UserRole>('coach');
+
   const [selectedSwimmerId, setSelectedSwimmerId] = useState<string>(
     swimmers[0]?.id || 'swimmer-1'
   );
@@ -33,7 +35,8 @@ export const LoginView: React.FC = () => {
       id: `user-${sw.id}`,
       name: sw.name,
       role: 'swimmer',
-      clubName: 'Club Natación Competitiva',
+      clubName: sw.club || 'Club Natación Competitiva',
+      sede: sw.sede || 'Sede Central',
       title: 'Nadador Federado',
       avatarUrl: sw.photoUrl,
       swimmerId: sw.id,
@@ -47,10 +50,12 @@ export const LoginView: React.FC = () => {
     login({
       name: customName.trim(),
       clubName: customClub.trim() || 'Club Natación',
+      sede: customSede.trim() || 'Sede Central',
       role: customRole,
       title: customRole === 'coach' ? 'Entrenador' : 'Nadador',
     });
   };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center px-4 py-8 max-w-md mx-auto">
@@ -145,7 +150,7 @@ export const LoginView: React.FC = () => {
                 >
                   {swimmers.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.age} años)
+                      {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : `(${s.age}a)`}
                     </option>
                   ))}
                 </select>
@@ -177,18 +182,34 @@ export const LoginView: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Club o Equipo
-              </label>
-              <input
-                type="text"
-                value={customClub}
-                onChange={(e) => setCustomClub(e.target.value)}
-                placeholder="Ej: Club Náutico / Natación Master"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Club o Equipo
+                </label>
+                <input
+                  type="text"
+                  value={customClub}
+                  onChange={(e) => setCustomClub(e.target.value)}
+                  placeholder="Ej: Club Natación"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sede / Pileta
+                </label>
+                <input
+                  type="text"
+                  value={customSede}
+                  onChange={(e) => setCustomSede(e.target.value)}
+                  placeholder="Ej: Sede Central"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
             </div>
+
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">

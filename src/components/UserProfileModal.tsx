@@ -4,12 +4,14 @@ import {
   X,
   User,
   Building,
+  MapPin,
   Camera,
   Loader2,
   Check,
   LogOut,
   Mail,
 } from 'lucide-react';
+
 import { SwimmerAvatar } from './SwimmerAvatar';
 import { processProfileImage } from '../utils/imageUtils';
 import type { UserRole } from '../types/swim';
@@ -24,6 +26,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
   const [name, setName] = useState('');
   const [clubName, setClubName] = useState('');
+  const [sede, setSede] = useState('');
   const [role, setRole] = useState<UserRole>('coach');
   const [title, setTitle] = useState('');
   const [email, setEmail] = useState('');
@@ -35,6 +38,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
     if (currentUser && isOpen) {
       setName(currentUser.name || '');
       setClubName(currentUser.clubName || '');
+      setSede(currentUser.sede || '');
       setRole(currentUser.role || 'coach');
       setTitle(currentUser.title || '');
       setEmail(currentUser.email || '');
@@ -42,6 +46,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
       setSavedSuccess(false);
     }
   }, [currentUser, isOpen]);
+
 
   if (!isOpen) return null;
 
@@ -68,11 +73,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
     updateCurrentUser({
       name: name.trim(),
       clubName: clubName.trim() || 'Club Natación',
+      sede: sede.trim() || undefined,
       role,
       title: title.trim() || (role === 'coach' ? 'Entrenador Principal' : 'Nadador'),
       email: email.trim() || undefined,
       avatarUrl,
     });
+
 
     setSavedSuccess(true);
     setTimeout(() => {
@@ -158,23 +165,44 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Club o Institución Deportiva
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Building className="w-4 h-4 text-slate-500" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Club o Institución
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Building className="w-3.5 h-3.5 text-slate-500" />
+                  </div>
+                  <input
+                    type="text"
+                    value={clubName}
+                    onChange={(e) => setClubName(e.target.value)}
+                    placeholder="Ej: Club Natación"
+                    className="w-full pl-8 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
-                <input
-                  type="text"
-                  value={clubName}
-                  onChange={(e) => setClubName(e.target.value)}
-                  placeholder="Ej: Club Natación Competitiva"
-                  className="w-full pl-9 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sede / Pileta Principal
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <input
+                    type="text"
+                    value={sede}
+                    onChange={(e) => setSede(e.target.value)}
+                    placeholder="Ej: Sede Central"
+                    className="w-full pl-8 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
               </div>
             </div>
+
 
             <div className="grid grid-cols-2 gap-3">
               <div>

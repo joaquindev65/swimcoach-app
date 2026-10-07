@@ -103,14 +103,15 @@ export const Header: React.FC<HeaderProps> = ({
             <select
               value={selectedSwimmerId}
               onChange={(e) => setSelectedSwimmerId(e.target.value)}
-              className="appearance-none bg-slate-800 text-xs font-semibold text-cyan-300 pl-7 pr-5 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-500 shadow-sm max-w-[105px] truncate"
+              className="appearance-none bg-slate-800 text-xs font-semibold text-cyan-300 pl-7 pr-5 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-500 shadow-sm max-w-[125px] truncate"
             >
               {swimmers.map((s) => (
                 <option key={s.id} value={s.id} className="bg-slate-800 text-white">
-                  {s.name}
+                  {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : ''}
                 </option>
               ))}
             </select>
+
             <span className="text-[8px] text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none">▼</span>
           </div>
 

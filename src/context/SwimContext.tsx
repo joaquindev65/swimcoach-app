@@ -16,9 +16,11 @@ export const DEFAULT_COACH_PROFILE: UserProfile = {
   name: 'Coach Joaquín',
   role: 'coach',
   clubName: 'Club Natación Competitiva',
+  sede: 'Sede Central',
   title: 'Entrenador Principal',
   createdAt: new Date().toISOString(),
 };
+
 
 interface SwimContextType {
   currentUser: UserProfile | null;
@@ -155,6 +157,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: profile.name.trim(),
       role: profile.role,
       clubName: profile.clubName?.trim() || 'Club Natación Competitiva',
+      sede: profile.sede?.trim() || 'Sede Central',
       title: profile.title || (profile.role === 'coach' ? 'Entrenador Principal' : 'Nadador Federado'),
       email: profile.email?.trim(),
       avatarUrl: profile.avatarUrl,
@@ -182,7 +185,8 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: 'user-' + (s ? s.id : 'swimmer'),
         name: s ? s.name : 'Nadador',
         role: 'swimmer',
-        clubName: currentUser?.clubName || 'Club Natación Competitiva',
+        clubName: s?.club || currentUser?.clubName || 'Club Natación Competitiva',
+        sede: s?.sede || currentUser?.sede || 'Sede Central',
         title: 'Nadador Federado',
         avatarUrl: s?.photoUrl,
         swimmerId: s?.id,
@@ -196,6 +200,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: currentUser?.role === 'coach' ? currentUser.name : 'Coach Joaquín',
         role: 'coach',
         clubName: currentUser?.clubName || 'Club Natación Competitiva',
+        sede: currentUser?.sede || 'Sede Central',
         title: 'Entrenador Principal',
         avatarUrl: currentUser?.avatarUrl,
         createdAt: new Date().toISOString(),
@@ -203,6 +208,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(coachProfile);
     }
   };
+
 
   const selectedSwimmer = swimmers.find((s) => s.id === selectedSwimmerId) || swimmers[0] || DEFAULT_SWIMMERS[0];
 

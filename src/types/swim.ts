@@ -18,12 +18,15 @@ export interface Swimmer {
   name: string;
   age: number;
   category?: string;
+  club?: string;
+  sede?: string;
   notes?: string;
   photoUrl?: string; // Data URL o URL de imagen de perfil
   // Personal Bests: times in seconds keyed by stroke and distance
   // e.g. pbs['LIBRE'][100] = 61.07
   pbs: Partial<Record<StrokeType, Record<number, number>>>;
 }
+
 
 export interface PaceCalculation {
   distance: number;
@@ -81,9 +84,11 @@ export interface UserProfile {
   email?: string;
   role: UserRole;
   clubName: string;
+  sede?: string;
   title?: string;
   avatarUrl?: string;
   swimmerId?: string; // Si el rol es 'swimmer', ID del nadador vinculado
   createdAt?: string;
 }
+
 
