@@ -24,6 +24,7 @@ export const DEFAULT_COACH_PROFILE: UserProfile = {
 
 interface SwimContextType {
   currentUser: UserProfile | null;
+  storageError: boolean;
   isLoggedIn: boolean;
   login: (profile: Partial<UserProfile> & { name: string; role: UserRole }) => void;
   logout: () => void;
@@ -56,6 +57,26 @@ const STORAGE_KEY_SWIMMERS = 'swimcoach_swimmers_v1';
 const STORAGE_KEY_WORKOUTS = 'swimcoach_workouts_v1';
 const STORAGE_KEY_SAVED_WORKOUTS = 'swimcoach_saved_workouts_v1';
 const STORAGE_KEY_USER = 'swimcoach_user_session_v1';
+const STORAGE_KEY_COACH = 'swimcoach_coach_profile_v1';
+
+/** Guarda en localStorage sin romper la app si está lleno o bloqueado. */
+const save = (key: string, value: unknown): boolean => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    console.error('Error saving to localStorage', key, e);
+    return false;
+  }
+};
+
+const isValidSwimmer = (s: any): s is Swimmer =>
+  !!s &&
+  typeof s.id === 'string' &&
+  typeof s.name === 'string' &&
+  typeof s.age === 'number' &&
+  !!s.pbs &&
+  typeof s.pbs === 'object';
 
 
 export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,10 +91,6 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error loading swimmers from localStorage', e);
     }
     return DEFAULT_SWIMMERS;
-  });
-
-  const [selectedSwimmerId, setSelectedSwimmerId] = useState<string>(() => {
-    return swimmers[0]?.id || DEFAULT_SWIMMERS[0].id;
   });
 
   const [workouts, setWorkouts] = useState<WorkoutSet[]>(() => {
@@ -131,25 +148,29 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEFAULT_COACH_PROFILE;
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_SWIMMERS, JSON.stringify(swimmers));
-  }, [swimmers]);
+  // Un nadador que recarga debe seguir viendo sus propios datos
+  const [selectedSwimmerId, setSelectedSwimmerId] = useState<string>(() => {
+    const own = currentUser?.swimmerId;
+    if (own && swimmers.some((s) => s.id === own)) return own;
+    return swimmers[0]?.id || DEFAULT_SWIMMERS[0].id;
+  });
+
+  const [storageError, setStorageError] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_WORKOUTS, JSON.stringify(workouts));
-  }, [workouts]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_SAVED_WORKOUTS, JSON.stringify(savedWorkouts));
-  }, [savedWorkouts]);
-
-  useEffect(() => {
+    const results = [
+      save(STORAGE_KEY_SWIMMERS, swimmers),
+      save(STORAGE_KEY_WORKOUTS, workouts),
+      save(STORAGE_KEY_SAVED_WORKOUTS, savedWorkouts),
+    ];
     if (currentUser) {
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(currentUser));
+      results.push(save(STORAGE_KEY_USER, currentUser));
+      if (currentUser.role === 'coach') results.push(save(STORAGE_KEY_COACH, currentUser));
     } else {
       localStorage.removeItem(STORAGE_KEY_USER);
     }
-  }, [currentUser]);
+    setStorageError(results.includes(false));
+  }, [swimmers, workouts, savedWorkouts, currentUser]);
 
   const login = (profile: Partial<UserProfile> & { name: string; role: UserRole }) => {
     const user: UserProfile = {
@@ -195,16 +216,14 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(swimmerProfile);
       if (s) setSelectedSwimmerId(s.id);
     } else {
-      const coachProfile: UserProfile = {
-        id: 'coach-1',
-        name: currentUser?.role === 'coach' ? currentUser.name : 'Coach Joaquín',
-        role: 'coach',
-        clubName: currentUser?.clubName || 'Club Natación Competitiva',
-        sede: currentUser?.sede || 'Sede Central',
-        title: 'Entrenador Principal',
-        avatarUrl: currentUser?.avatarUrl,
-        createdAt: new Date().toISOString(),
-      };
+      // Restaura el último perfil de coach guardado (no el de nadador)
+      let coachProfile = DEFAULT_COACH_PROFILE;
+      try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY_COACH) || 'null');
+        if (stored?.role === 'coach' && stored.name) coachProfile = stored;
+      } catch (e) {
+        console.error('Error loading coach profile from localStorage', e);
+      }
       setCurrentUser(coachProfile);
     }
   };
@@ -234,6 +253,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (selectedSwimmerId === id) {
       setSelectedSwimmerId(remaining[0].id);
     }
+    if (currentUser?.swimmerId === id) switchRole('coach');
   };
 
   const updatePB = (swimmerId: string, stroke: StrokeType, distance: number, timeSecs: number | null) => {
@@ -262,9 +282,8 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSwimmers(DEFAULT_SWIMMERS);
       setSelectedSwimmerId(DEFAULT_SWIMMERS[0].id);
       setSavedWorkouts(DEFAULT_WORKOUT_TEMPLATES);
-      localStorage.removeItem(STORAGE_KEY_SWIMMERS);
-      localStorage.removeItem(STORAGE_KEY_WORKOUTS);
-      localStorage.removeItem(STORAGE_KEY_SAVED_WORKOUTS);
+      setWorkouts([]);
+      if (currentUser?.swimmerId) switchRole('coach');
     }
   };
 
@@ -354,16 +373,28 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = JSON.parse(jsonContent);
 
-      if (!data || !Array.isArray(data.swimmers) || data.swimmers.length === 0) {
+      if (
+        !data ||
+        !Array.isArray(data.swimmers) ||
+        data.swimmers.length === 0 ||
+        !data.swimmers.every(isValidSwimmer)
+      ) {
         return {
           success: false,
           message: 'El archivo no contiene un listado válido de nadadores de SwimCoach.',
         };
       }
+      if (
+        (data.workouts !== undefined && !Array.isArray(data.workouts)) ||
+        (data.savedWorkouts !== undefined && !Array.isArray(data.savedWorkouts))
+      ) {
+        return { success: false, message: 'El archivo tiene entrenamientos con formato inválido.' };
+      }
 
       setSwimmers(data.swimmers);
-      if (data.swimmers[0]) {
-        setSelectedSwimmerId(data.swimmers[0].id);
+      setSelectedSwimmerId(data.swimmers[0].id);
+      if (currentUser?.swimmerId && !data.swimmers.some((s: Swimmer) => s.id === currentUser.swimmerId)) {
+        switchRole('coach');
       }
 
       if (Array.isArray(data.workouts)) {
@@ -390,6 +421,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <SwimContext.Provider
       value={{
         currentUser,
+        storageError,
         isLoggedIn: !!currentUser,
         login,
         logout,

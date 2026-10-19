@@ -289,7 +289,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onOpenLanding }) => {
 
       {/* Footer Info */}
       <p className="text-center text-[10px] text-slate-400 mt-3 font-medium">
-        SwimCoach PRO • Almacenamiento Seguro Local • 100% Offline
+        SwimCoach PRO • Almacenamiento Local • 100% Offline
       </p>
     </div>
   );

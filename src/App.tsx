@@ -17,7 +17,7 @@ import { PoolConverterModal } from './components/PoolConverterModal';
 import { InstallAppBanner } from './components/InstallAppBanner';
 
 const MainApp: React.FC = () => {
-  const { isLoggedIn, currentUser, switchRole } = useSwim();
+  const { isLoggedIn, currentUser, switchRole, storageError } = useSwim();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -78,6 +78,12 @@ const MainApp: React.FC = () => {
         onOpenBackup={() => setIsBackupOpen(true)}
         onOpenConverter={() => setIsConverterOpen(true)}
       />
+
+      {storageError && (
+        <div className="bg-rose-950/80 border-b border-rose-500/40 px-3 py-1.5 text-center text-xs text-rose-300 max-w-md mx-auto w-full">
+          Almacenamiento lleno: los cambios no se guardan. Descarga una copia de seguridad.
+        </div>
+      )}
 
       {/* Swimmer Mode Warning / Switcher banner */}
       {isSwimmerMode && (
@@ -148,11 +154,41 @@ const MainApp: React.FC = () => {
   );
 };
 
+// Evita la pantalla en blanco si datos corruptos rompen el render
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  reset = () => {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('swimcoach_'))
+      .forEach((k) => localStorage.removeItem(k));
+    window.location.reload();
+  };
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-sm">Los datos guardados están dañados y la app no puede abrirse.</p>
+        <button onClick={this.reset} className="px-4 py-2 rounded-xl bg-rose-500 text-slate-950 font-bold text-xs">
+          Reiniciar datos
+        </button>
+      </div>
+    );
+  }
+}
+
 export function App() {
   return (
-    <SwimProvider>
-      <MainApp />
-    </SwimProvider>
+    <ErrorBoundary>
+      <SwimProvider>
+        <MainApp />
+      </SwimProvider>
+    </ErrorBoundary>
   );
 }
 
