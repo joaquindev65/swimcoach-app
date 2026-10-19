@@ -71,71 +71,118 @@ export const PoolsideView: React.FC = () => {
   const [sendoffSound, setSendoffSound] = useState(true);
   const [sendoffCompleted, setSendoffCompleted] = useState(false);
 
-  // Interval reference for stopwatch
+  // Stopwatch: se calcula con el reloj (performance.now), no sumando ticks,
+  // así no pierde tiempo si el navegador frena el intervalo (pantalla bloqueada).
+  const timerSecondsRef = useRef(0);
+
+  // Send-off timer: también basado en el reloj. Se rearma (nueva base) al
+  // iniciar/pausar, saltar repetición o cambiar ciclo/repeticiones.
+  const [sendoffEpoch, setSendoffEpoch] = useState(0);
+  const sendoffRef = useRef({
+    isPrep: false,
+    prepSecs: 5,
+    remaining: 60,
+    rep: 1,
+    cycle: 60,
+    total: 8,
+    sound: true,
+  });
+
+  // Debe ir antes de los efectos de los temporizadores: ellos leen estos refs
   useEffect(() => {
-    let interval: any = null;
-    if (timerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 0.1);
-      }, 100);
-    }
+    timerSecondsRef.current = timerSeconds;
+    sendoffRef.current = {
+      isPrep: sendoffIsPrep,
+      prepSecs: sendoffPrepSecs,
+      remaining: sendoffRemainingSecs,
+      rep: sendoffCurrentRep,
+      cycle: sendoffCycleSecs,
+      total: sendoffRepsTotal,
+      sound: sendoffSound,
+    };
+  });
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const startedAt = performance.now();
+    const base = timerSecondsRef.current;
+    const interval = setInterval(() => {
+      setTimerSeconds(base + (performance.now() - startedAt) / 1000);
+    }, 100);
     return () => clearInterval(interval);
   }, [timerRunning]);
 
-  // Interval tick for Send-off Timer (1 second accuracy)
-  const sendoffTimerRef = useRef<any>(null);
-
   useEffect(() => {
-    if (!sendoffRunning) {
-      if (sendoffTimerRef.current) clearInterval(sendoffTimerRef.current);
-      return;
-    }
+    if (!sendoffRunning) return;
+    const snap = sendoffRef.current;
+    const startedAt = performance.now();
+    const lead = snap.isPrep ? snap.prepSecs : 0; // segundos de preparación
+    const first = snap.isPrep ? snap.cycle : snap.remaining; // lo que queda de la primera repetición
+    const startRep = snap.isPrep ? 1 : snap.rep;
+    let lastPrep = snap.isPrep ? snap.prepSecs : 0;
+    let lastRep = snap.rep;
+    let lastRem = snap.remaining;
 
-    sendoffTimerRef.current = setInterval(() => {
-      if (sendoffIsPrep) {
-        setSendoffPrepSecs((prev) => {
-          const next = prev - 1;
-          if (next > 0 && next <= 3 && sendoffSound) {
-            playCountdownBeep();
-          } else if (next === 0) {
-            if (sendoffSound) playStartHorn();
-            setSendoffIsPrep(false);
-            setSendoffRemainingSecs(sendoffCycleSecs);
-            setSendoffCurrentRep(1);
-            return 5;
-          }
-          return next;
-        });
-      } else {
-        setSendoffRemainingSecs((prev) => {
-          const next = prev - 1;
-          if (next > 0 && next <= 3 && sendoffSound) {
-            playCountdownBeep();
-          } else if (next <= 0) {
-            setSendoffCurrentRep((currRep) => {
-              if (currRep >= sendoffRepsTotal) {
-                // Completed whole workout!
-                setSendoffRunning(false);
-                setSendoffCompleted(true);
-                if (sendoffSound) playCompleteFanfare();
-                return currRep;
-              } else {
-                if (sendoffSound) playStartHorn();
-                setSendoffRemainingSecs(sendoffCycleSecs);
-                return currRep + 1;
-              }
-            });
-            return sendoffCycleSecs;
-          }
-          return next;
-        });
+    const interval = setInterval(() => {
+      const { cycle, total, sound } = sendoffRef.current;
+      const e = (performance.now() - startedAt) / 1000;
+
+      if (e < lead) {
+        const prepLeft = Math.ceil(lead - e);
+        if (prepLeft !== lastPrep) {
+          if (sound && prepLeft <= 3) playCountdownBeep();
+          lastPrep = prepLeft;
+          setSendoffPrepSecs(prepLeft);
+        }
+        return;
       }
-    }, 1000);
 
-    return () => {
-      if (sendoffTimerRef.current) clearInterval(sendoffTimerRef.current);
-    };
-  }, [sendoffRunning, sendoffIsPrep, sendoffCycleSecs, sendoffRepsTotal, sendoffSound]);
+      const e2 = e - lead;
+      let rep = startRep;
+      let rem: number;
+      if (e2 < first) {
+        rem = Math.ceil(first - e2);
+      } else {
+        const e3 = e2 - first;
+        rep = startRep + 1 + Math.floor(e3 / cycle);
+        rem = Math.ceil(cycle - (e3 % cycle));
+      }
+
+      if (rep > total) {
+        if (sound) playCompleteFanfare();
+        setSendoffRunning(false);
+        setSendoffCompleted(true);
+        setSendoffIsPrep(false);
+        setSendoffPrepSecs(5);
+        setSendoffCurrentRep(total);
+        setSendoffRemainingSecs(cycle);
+        return;
+      }
+
+      if (lead > 0 && lastPrep !== 0) {
+        // terminó la preparación
+        lastPrep = 0;
+        setSendoffIsPrep(false);
+        setSendoffPrepSecs(5);
+        if (sound) playStartHorn();
+      } else if (rep !== lastRep) {
+        if (sound) playStartHorn();
+      } else if (rem !== lastRem && rem <= 3 && sound) {
+        playCountdownBeep();
+      }
+
+      if (rep !== lastRep) {
+        lastRep = rep;
+        setSendoffCurrentRep(rep);
+      }
+      if (rem !== lastRem) {
+        lastRem = rem;
+        setSendoffRemainingSecs(rem);
+      }
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [sendoffRunning, sendoffEpoch, sendoffCycleSecs, sendoffRepsTotal]);
 
   // Sendoff Controls
   const handleStartSendoff = () => {
@@ -165,6 +212,7 @@ export const PoolsideView: React.FC = () => {
     if (sendoffCurrentRep < sendoffRepsTotal) {
       setSendoffCurrentRep((prev) => prev + 1);
       setSendoffRemainingSecs(sendoffCycleSecs);
+      setSendoffEpoch((n) => n + 1);
       if (sendoffSound) playStartHorn();
     }
   };
@@ -173,6 +221,7 @@ export const PoolsideView: React.FC = () => {
     if (sendoffCurrentRep > 1) {
       setSendoffCurrentRep((prev) => prev - 1);
       setSendoffRemainingSecs(sendoffCycleSecs);
+      setSendoffEpoch((n) => n + 1);
     }
   };
 
