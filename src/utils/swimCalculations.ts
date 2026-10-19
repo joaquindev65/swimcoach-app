@@ -104,36 +104,24 @@ export function formatTime(seconds: number | undefined | null): string {
   if (seconds === undefined || seconds === null || isNaN(seconds) || seconds <= 0) {
     return '--:--.--';
   }
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  const wholeSecs = Math.floor(secs);
-  const hundredths = Math.round((secs - wholeSecs) * 100);
+  // Redondear el total primero: evita centésimas = 100 (ej. 26.996 -> "26.100")
+  const total = Math.round(seconds * 100);
+  const hundredths = (total % 100).toString().padStart(2, '0');
+  const whole = Math.floor(total / 100);
+  const mins = Math.floor(whole / 60);
+  const secs = (whole % 60).toString().padStart(2, '0');
 
-  const formattedSecs = wholeSecs.toString().padStart(2, '0');
-  const formattedHundredths = hundredths.toString().padStart(2, '0');
-
-  if (mins > 0) {
-    return `${mins}:${formattedSecs}.${formattedHundredths}`;
-  }
-  return `${formattedSecs}.${formattedHundredths}s`;
+  return mins > 0 ? `${mins}:${secs}.${hundredths}` : `${secs}.${hundredths}s`;
 }
 
-/** Parsea un string tipo "1:01.07" o "26.80" o "61.07" a segundos */
+/** Parsea "1:01.07", "26.80" o "61.07" a segundos. Devuelve null si es inválido. */
 export function parseTimeToSeconds(input: string): number | null {
-  if (!input) return null;
-  const clean = input.trim().replace(',', '.');
-  
-  if (clean.includes(':')) {
-    const parts = clean.split(':');
-    const mins = parseFloat(parts[0]);
-    const secs = parseFloat(parts[1]);
-    if (isNaN(mins) || isNaN(secs)) return null;
-    return mins * 60 + secs;
-  }
-  
-  const secs = parseFloat(clean);
-  if (isNaN(secs) || secs <= 0) return null;
-  return secs;
+  const match = /^(?:(\d+):)?(\d+(?:\.\d{1,2})?)$/.exec((input ?? '').trim().replace(',', '.'));
+  if (!match) return null;
+  const secs = parseFloat(match[2]);
+  if (match[1] !== undefined && secs >= 60) return null;
+  const total = (match[1] ? parseInt(match[1], 10) * 60 : 0) + secs;
+  return total > 0 ? total : null;
 }
 
 /** Calcula FC máxima: 220 - edad */
