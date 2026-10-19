@@ -13,6 +13,13 @@ export interface ZoneConfig {
   energySystem: string;
 }
 
+export interface TimeEntry {
+  stroke: StrokeType;
+  distance: number;
+  time: number; // segundos
+  date: string; // YYYY-MM-DD, fecha local
+}
+
 export interface Swimmer {
   id: string;
   name: string;
@@ -25,6 +32,8 @@ export interface Swimmer {
   // Personal Bests: times in seconds keyed by stroke and distance
   // e.g. pbs['LIBRE'][100] = 61.07
   pbs: Partial<Record<StrokeType, Record<number, number>>>;
+  // Marcas guardadas a lo largo del tiempo; `pbs` es siempre la vigente
+  history?: TimeEntry[];
 }
 
 

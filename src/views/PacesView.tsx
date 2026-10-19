@@ -7,6 +7,7 @@ import {
   calculatePacesForDistance,
   formatTime,
 } from '../utils/swimCalculations';
+import { historyFor } from '../utils/history';
 import { TimeInputModal } from '../components/TimeInputModal';
 import {
   Timer,
@@ -41,6 +42,8 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
     : availableDistances[0];
 
   const currentPB = selectedSwimmer.pbs[selectedStroke]?.[currentDistance] || null;
+
+  const history = historyFor(selectedSwimmer.history, selectedStroke, currentDistance);
 
   const paces = currentPB
     ? calculatePacesForDistance(
@@ -207,6 +210,27 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
                 Toca para modificar
               </div>
             </div>
+
+            {/* Historial de marcas */}
+            {history.length > 1 && (
+              <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 mb-3 text-xs">
+                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
+                  Historial
+                </div>
+                {history.map((h, i) => {
+                  const diff = i < history.length - 1 ? h.time - history[i + 1].time : null;
+                  return (
+                    <div key={h.date} className="flex justify-between font-mono py-0.5">
+                      <span className="text-slate-400">{h.date}</span>
+                      <span className="text-white">{formatTime(h.time)}</span>
+                      <span className={diff === null ? 'text-slate-500' : diff <= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {diff === null ? '—' : `${diff <= 0 ? '' : '+'}${diff.toFixed(2)}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Target and Training Base Split */}
             <div className="grid grid-cols-2 gap-2 text-xs">

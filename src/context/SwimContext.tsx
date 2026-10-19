@@ -10,6 +10,7 @@ import type {
 } from '../types/swim';
 import { DEFAULT_SWIMMERS } from '../data/defaultSwimmers';
 import { DEFAULT_WORKOUT_TEMPLATES } from '../data/defaultWorkouts';
+import { addHistory } from '../utils/history';
 
 export const DEFAULT_COACH_PROFILE: UserProfile = {
   id: 'coach-1',
@@ -261,13 +262,17 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       prev.map((s) => {
         if (s.id !== swimmerId) return s;
         const strokePbs = { ...(s.pbs[stroke] || {}) };
+        let history = s.history;
         if (timeSecs === null || timeSecs <= 0) {
           delete strokePbs[distance];
         } else {
           strokePbs[distance] = timeSecs;
+          // 'sv-SE' da YYYY-MM-DD en hora local
+          history = addHistory(history, { stroke, distance, time: timeSecs, date: new Date().toLocaleDateString('sv-SE') });
         }
         return {
           ...s,
+          history,
           pbs: {
             ...s.pbs,
             [stroke]: strokePbs,
