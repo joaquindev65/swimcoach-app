@@ -11,17 +11,7 @@ import {
 import { historyFor } from '../utils/history';
 import { TimeInputModal } from '../components/TimeInputModal';
 import { ZoneSettingsModal } from '../components/ZoneSettingsModal';
-import {
-  Timer,
-  Target,
-  TrendingUp,
-  Heart,
-  PlusCircle,
-  Share2,
-  Clock,
-  Sparkles,
-  ArrowRightLeft,
-} from 'lucide-react';
+import { PlusCircle, Share2, Clock, ArrowRightLeft } from 'lucide-react';
 import { SwimmerAvatar } from '../components/SwimmerAvatar';
 
 interface PacesViewProps {
@@ -89,307 +79,169 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
   };
 
   return (
-    <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
-      {/* Toast Notification */}
+    <div className="pb-24 pt-4 px-4 max-w-md mx-auto space-y-6">
       {copiedNotification && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-slate-950 font-bold text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce">
-          <Sparkles className="w-3.5 h-3.5" />
-          ¡Serie añadida al Pizarrón de Entrenamiento!
+        <div role="status" className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#EEF3F1] text-[#0B1F2A] font-semibold text-xs px-4 py-2 rounded-full shadow-lg">
+          Serie añadida a la pizarra
         </div>
       )}
 
-      {/* Stroke Selector Tabs (Horizontal Scroll) */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none -mx-1 px-1">
-        {STROKES.map((s) => {
-          const isSelected = selectedStroke === s.type;
-          return (
-            <button
-              key={s.type}
-              onClick={() => {
-                setSelectedStroke(s.type);
-                const distances = STROKE_DISTANCES[s.type];
-                if (!distances.includes(selectedDistance)) {
-                  setSelectedDistance(distances[0]);
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
-                isSelected
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
-                  : 'bg-slate-800/90 text-slate-300 hover:bg-slate-750'
-              }`}
-            >
-              <span>{s.icon}</span>
-              <span>{s.label.split('/')[0].trim()}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Distance Selector Pills */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {availableDistances.map((d) => {
-          const isSelected = currentDistance === d;
-          const hasTime = !!selectedSwimmer.pbs[selectedStroke]?.[d];
-          return (
-            <button
-              key={d}
-              onClick={() => setSelectedDistance(d)}
-              className={`flex-1 min-w-[58px] py-1.5 rounded-lg text-xs font-mono font-bold transition-all relative ${
-                isSelected
-                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              {d}m
-              {hasTime && (
-                <span
-                  className={`w-1.5 h-1.5 rounded-full absolute top-1 right-1 ${
-                    isSelected ? 'bg-slate-950' : 'bg-cyan-400'
-                  }`}
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Main Metric Card: Personal Best & Targets */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-4 shadow-xl relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <SwimmerAvatar
-              name={selectedSwimmer.name}
-              photoUrl={selectedSwimmer.photoUrl}
-              size="sm"
-              shape="rounded-xl"
-            />
-            <div>
-              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">
-                {selectedSwimmer.name} • {selectedStroke}
-              </span>
-              <h2 className="text-xl font-black text-white flex items-center gap-1.5">
-                {currentDistance}m {selectedStroke}
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {onOpenConverter && (
+      {/* Estilo y distancia */}
+      <div className="space-y-2">
+        <div className="flex gap-4 overflow-x-auto scrollbar-none border-b border-slate-800" role="group" aria-label="Estilo">
+          {STROKES.map((s) => {
+            const isSelected = selectedStroke === s.type;
+            return (
               <button
-                onClick={onOpenConverter}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-amber-300 text-xs font-bold active:scale-95 transition-all shadow-sm"
-                title="Convertir tiempos entre 25m, 50m y Yardas"
+                key={s.type}
+                onClick={() => {
+                  setSelectedStroke(s.type);
+                  const distances = STROKE_DISTANCES[s.type];
+                  if (!distances.includes(selectedDistance)) setSelectedDistance(distances[0]);
+                }}
+                aria-pressed={isSelected}
+                className={`pb-2 -mb-px border-b-2 text-sm font-semibold whitespace-nowrap ${
+                  isSelected ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white'
+                }`}
               >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">25m/50m</span>
+                {s.label.split('/')[0].trim()}
               </button>
-            )}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold hover:bg-cyan-500/25 active:scale-95 transition-all"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              {currentPB ? 'Editar' : 'Cargar'}
-            </button>
+            );
+          })}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none" role="group" aria-label="Distancia">
+          {availableDistances.map((d) => {
+            const isSelected = currentDistance === d;
+            const hasTime = !!selectedSwimmer.pbs[selectedStroke]?.[d];
+            return (
+              <button
+                key={d}
+                onClick={() => setSelectedDistance(d)}
+                aria-pressed={isSelected}
+                className={`flex-1 min-w-[58px] py-1.5 rounded-lg text-sm font-semibold tabular-nums ${
+                  isSelected ? 'bg-[#EEF3F1] text-[#0B1F2A]' : hasTime ? 'text-white bg-slate-800' : 'text-slate-500 bg-slate-900'
+                }`}
+              >
+                {d} m
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Marca vigente */}
+      <section aria-labelledby="pb-title" className="space-y-3">
+        <div className="flex items-center gap-3">
+          <SwimmerAvatar name={selectedSwimmer.name} photoUrl={selectedSwimmer.photoUrl} size="md" shape="rounded-2xl" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-slate-400 truncate">{selectedSwimmer.name}</p>
+            <h2 id="pb-title" className="font-display text-2xl font-bold text-white leading-tight">
+              {currentDistance} m {selectedStroke}
+            </h2>
           </div>
+          {onOpenConverter && (
+            <button onClick={onOpenConverter} className="flex-shrink-0 text-slate-400 hover:text-amber-300 p-2" title="Convertir entre 25 m, 50 m y yardas" aria-label="Conversor de piscina">
+              <ArrowRightLeft className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {currentPB ? (
-          <div>
-            {/* Big PB Display */}
-            <div
-              onClick={() => setIsModalOpen(true)}
-              className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3 text-center cursor-pointer hover:border-cyan-500/40 transition-colors mb-3"
-            >
-              <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">
-                Tiempo Competencia (Marca Personal)
+          <>
+            <button onClick={() => setIsModalOpen(true)} className="w-full flex items-baseline justify-between text-left active:opacity-70">
+              <span className="text-xs text-slate-400">Marca personal</span>
+              <span className="font-display text-5xl font-bold text-white tabular-nums">{formatTime(currentPB)}</span>
+            </button>
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-800 pt-3 tabular-nums">
+              <div>
+                <p className="text-xs text-slate-400">Objetivo (−3%)</p>
+                <p className="font-display text-2xl font-bold text-emerald-300">{formatTime(paces?.objectiveTime)}</p>
               </div>
-              <div className="text-3xl font-black font-mono text-white tracking-tight">
-                {formatTime(currentPB)}
-              </div>
-              <div className="text-[10px] text-cyan-400 font-medium mt-0.5">
-                Toca para modificar
+              <div>
+                <p className="text-xs text-slate-400">Base de entreno (+3%)</p>
+                <p className="font-display text-2xl font-bold text-white">{formatTime(paces?.trainingBaseTime)}</p>
               </div>
             </div>
 
-            {/* Historial de marcas */}
             {history.length > 1 && (
-              <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 mb-3 text-xs">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
-                  Historial
-                </div>
-                {history.map((h, i) => {
-                  const diff = i < history.length - 1 ? h.time - history[i + 1].time : null;
-                  return (
-                    <div key={h.date} className="flex justify-between font-mono py-0.5">
-                      <span className="text-slate-400">{h.date}</span>
-                      <span className="text-white">{formatTime(h.time)}</span>
-                      <span className={diff === null ? 'text-slate-500' : diff <= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                        {diff === null ? '—' : `${diff <= 0 ? '' : '+'}${diff.toFixed(2)}`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              <table className="w-full text-xs tabular-nums">
+                <caption className="sr-only">Historial de marcas</caption>
+                <tbody className="divide-y divide-slate-800">
+                  {history.map((h, i) => {
+                    const diff = i < history.length - 1 ? h.time - history[i + 1].time : null;
+                    return (
+                      <tr key={h.date}>
+                        <td className="py-1 text-slate-400">{h.date}</td>
+                        <td className="py-1 text-right text-white">{formatTime(h.time)}</td>
+                        <td className={`py-1 text-right w-16 ${diff === null ? 'text-slate-500' : diff <= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {diff === null ? '—' : `${diff <= 0 ? '' : '+'}${diff.toFixed(2)}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
-
-            {/* Target and Training Base Split */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-950/60 border border-emerald-500/20 rounded-xl p-2.5">
-                <div className="flex items-center gap-1 text-emerald-400 font-bold text-[11px] mb-0.5">
-                  <Target className="w-3 h-3" />
-                  Objetivo (-3%)
-                </div>
-                <div className="text-lg font-black font-mono text-emerald-300">
-                  {formatTime(paces?.objectiveTime)}
-                </div>
-                <p className="text-[9px] text-slate-400">Proyección de mejora</p>
-              </div>
-
-              <div className="bg-slate-950/60 border border-blue-500/20 rounded-xl p-2.5">
-                <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] mb-0.5">
-                  <TrendingUp className="w-3 h-3" />
-                  Base Entreno (+3%)
-                </div>
-                <div className="text-lg font-black font-mono text-blue-300">
-                  {formatTime(paces?.trainingBaseTime)}
-                </div>
-                <p className="text-[9px] text-slate-400">+{formatTime(paces?.incrementTime)} inc.</p>
-              </div>
-            </div>
-          </div>
+            <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-300 hover:text-cyan-200">
+              <Clock className="w-3.5 h-3.5" />
+              Editar marca
+            </button>
+          </>
         ) : (
-          <div className="text-center py-6 px-4 bg-slate-950/50 rounded-2xl border border-dashed border-slate-800">
-            <Timer className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <p className="text-xs text-slate-400 font-medium mb-3">
-              No hay tiempo de competencia cargado para {currentDistance}m {selectedStroke}.
-            </p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs shadow-md shadow-cyan-500/20 active:scale-95"
-            >
-              Cargar Marca Ahora
+          <div>
+            <p className="text-sm text-slate-400">Sin marca cargada para {currentDistance} m {selectedStroke}.</p>
+            <button onClick={() => setIsModalOpen(true)} className="mt-3 w-full rounded-xl bg-[#EEF3F1] text-[#0B1F2A] font-bold text-sm py-3 active:scale-95 transition-transform">
+              Cargar marca
             </button>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Calculated Zones List */}
+      {/* Zonas */}
       {paces && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Heart className="w-3.5 h-3.5 text-red-400" />
-              Ritmos por Zona Fisiológica
-            </h3>
-            <button
-              onClick={() => setIsZonesOpen(true)}
-              className="ml-auto mr-3 text-xs font-semibold text-cyan-400 hover:text-cyan-300 active:scale-95"
-            >
-              Ajustar zonas
-            </button>
-            <button
-              onClick={handleShareWhatsApp}
-              className="flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:scale-95"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              WhatsApp
-            </button>
+        <section aria-labelledby="zones-title" className="rounded-2xl bg-[#EEF3F1] text-[#0B1F2A] p-4 shadow-xl">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 id="zones-title" className="font-display text-xl font-bold">Ritmos por zona</h3>
+            <div className="flex gap-4 text-xs font-semibold text-[#0E7C9B]">
+              <button onClick={() => setIsZonesOpen(true)}>Ajustar zonas</button>
+              <button onClick={handleShareWhatsApp} className="inline-flex items-center gap-1">
+                <Share2 className="w-3.5 h-3.5" />
+                WhatsApp
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {paces.zones.map((z) => {
-              const isSpeed = z.config.category === 'VEL';
-              const isVo2 = z.config.category === 'MVO2';
-              const isLactate = z.config.category === 'TL' || z.config.category === 'RL';
-
-              const badgeColor = isSpeed
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-                : isLactate
-                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                : isVo2
-                ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
-                : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300';
-
-              return (
-                <div
-                  key={z.config.code}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-3.5 transition-all shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border ${badgeColor}`}>
-                          {z.config.name}
-                        </span>
-                        <span className="text-xs font-bold text-white">
-                          {z.config.minPct}–{z.config.maxPct}% vm
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                        {z.config.description}
-                      </p>
-                    </div>
-
-                    {/* Quick Add to Workout Button */}
-                    <button
-                      onClick={() => handleQuickAddToWorkout(z.config.code)}
-                      title="Agregar serie de esta zona al Pizarrón"
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-400 active:scale-95 transition-colors"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Pace Time and Pulse Counters */}
-                  <div className="grid grid-cols-3 gap-2 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 items-center text-center">
-                    {/* Ritmo Tiempo */}
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
-                        Ritmo Paso
-                      </span>
-                      <span className="text-sm font-black font-mono text-cyan-300">
-                        {formatTime(z.paceTime)}
-                      </span>
-                      <span className="text-[9px] text-slate-500 block">
-                        entrada {formatTime(z.paceSlow)}
-                      </span>
-                    </div>
-
-                    {/* Pulso BPM */}
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
-                        Pulso (BPM)
-                      </span>
-                      <span className="text-sm font-bold font-mono text-red-400">
-                        {z.bpm} <span className="text-[9px] text-slate-500">lpm</span>
-                      </span>
-                    </div>
-
-                    {/* Pulso 5 segundos (Crucial!) */}
-                    <div className="bg-red-950/30 border border-red-500/20 py-1 rounded-lg">
-                      <span className="text-[9px] uppercase font-bold text-red-400 block leading-tight">
-                        Pulso (5s)
-                      </span>
-                      <span className="text-sm font-black font-mono text-white">
-                        {z.pulse5s}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Rest interval note */}
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2 px-1">
-                    <span>⏱️ Descanso: <strong className="text-amber-300 font-semibold">{z.config.restDescription}</strong></span>
-                    <span className="text-slate-500">{z.config.energySystem}</span>
-                  </div>
+          <ul className="mt-2 divide-y divide-[#0B1F2A]/15">
+            {paces.zones.map((z) => (
+              <li key={z.config.code} className="py-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    <span className="font-display text-xl font-bold text-[#0E7C9B]">{z.config.name}</span>{' '}
+                    <span className="text-xs text-[#0B1F2A]/70 tabular-nums">{z.config.minPct}–{z.config.maxPct}%</span>
+                  </span>
+                  <span className="whitespace-nowrap tabular-nums">
+                    <span className="text-sm text-[#0B1F2A]/70">{formatTime(z.paceSlow)} → </span>
+                    <span className="font-display text-2xl font-bold">{formatTime(z.paceTime)}</span>
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <p className="text-xs text-[#0B1F2A]/70 tabular-nums min-w-0 truncate">
+                    {z.bpm} lpm · <strong>{z.pulse5s}</strong> en 5 s · descanso {z.config.restDescription}
+                  </p>
+                  <button
+                    onClick={() => handleQuickAddToWorkout(z.config.code)}
+                    title="Agregar serie de esta zona a la pizarra"
+                    aria-label={`Agregar serie ${z.config.name} a la pizarra`}
+                    className="flex-shrink-0 p-1 text-[#0E7C9B] active:scale-90"
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-[#0B1F2A]/60 pt-1">Entrada → salida de cada intensidad.</p>
+        </section>
       )}
 
       <ZoneSettingsModal isOpen={isZonesOpen} onClose={() => setIsZonesOpen(false)} />

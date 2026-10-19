@@ -17,20 +17,15 @@ import {
   Play,
   Pause,
   RotateCcw,
-  Flame,
   Maximize,
   Minimize,
-  Users,
-  Timer,
   Plus,
   Trash2,
   Clock,
   Volume2,
   VolumeX,
-  AlarmClock,
   SkipForward,
   SkipBack,
-  Sparkles,
 } from 'lucide-react';
 import { SwimmerAvatar } from '../components/SwimmerAvatar';
 import type { StrokeType, ZoneCode, MultiLaneSlot, WorkoutSet } from '../types/swim';
@@ -322,113 +317,87 @@ export const PoolsideView: React.FC = () => {
     }
   };
 
-  return (
-    <div className="pb-24 pt-2 px-3 max-w-md mx-auto space-y-4">
-      {/* Poolside Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            <Flame className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-white">Modo Borde de Pileta</h2>
-            <p className="text-xs text-slate-400">Control visual y sonoro a pie de pileta</p>
-          </div>
-        </div>
+  const field = 'w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-sm font-semibold text-white focus:outline-none focus:border-cyan-500';
+  const stepBtn = 'w-9 h-9 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-lg disabled:opacity-40';
+  const modeTabs = [
+    { id: 'single', label: 'Individual' },
+    { id: 'multi', label: `Andariveles (${lanes.length})` },
+    { id: 'sendoff', label: 'Salidas' },
+  ] as const;
 
+  return (
+    <div className="pb-24 pt-4 px-4 max-w-md mx-auto space-y-5">
+      <header className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs text-slate-400">Cronómetro y salidas</p>
+          <h2 className="font-display text-3xl font-bold text-white leading-tight">En pileta</h2>
+        </div>
         <button
           onClick={toggleFullscreen}
-          className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+          className="p-2 text-slate-400 hover:text-white"
           title="Pantalla completa"
+          aria-label="Pantalla completa"
         >
-          {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
         </button>
+      </header>
+
+      <div className="flex gap-5 border-b border-slate-800" role="group" aria-label="Modo">
+        {modeTabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              if (t.id === 'sendoff') initAudio();
+              setTimerMode(t.id);
+            }}
+            aria-pressed={timerMode === t.id}
+            className={`pb-2 -mb-px border-b-2 text-sm font-semibold whitespace-nowrap ${
+              timerMode === t.id ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* Mode Switcher Tabs (3 Modes) */}
-      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
-        <button
-          onClick={() => setTimerMode('single')}
-          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-            timerMode === 'single'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Timer className="w-3.5 h-3.5" />
-          Individual
-        </button>
-
-        <button
-          onClick={() => setTimerMode('multi')}
-          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-            timerMode === 'multi'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Multi ({lanes.length})
-        </button>
-
-        <button
-          onClick={() => {
-            initAudio();
-            setTimerMode('sendoff');
-          }}
-          className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-            timerMode === 'sendoff'
-              ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <AlarmClock className="w-3.5 h-3.5" />
-          Reloj Salidas
-        </button>
-      </div>
-
-      {/* ============================================================== */}
-      {/* MODE 1 & 2: TRADITIONAL STOPWATCH CLOCK (Shared by Single & Multi) */}
-      {/* ============================================================== */}
+      {/* Cronómetro (individual y andariveles) */}
       {timerMode !== 'sendoff' && (
-        <div className="bg-slate-950 border-2 border-cyan-500/40 rounded-3xl p-5 shadow-2xl text-center">
-          <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest block mb-1">
-            {timerMode === 'single' ? 'Cronómetro Principal' : 'Largada Conjunta / Master'}
-          </span>
-          <div className="text-5xl font-black font-mono text-white tracking-tight my-2">
+        <section aria-label="Cronómetro" className="text-center">
+          <p className="text-xs text-slate-400">
+            {timerMode === 'single' ? 'Cronómetro' : 'Largada conjunta'}
+          </p>
+          <div className="font-display text-7xl font-bold text-white tabular-nums my-1" aria-live="off">
             {formatTime(timerSeconds)}
           </div>
 
-          {/* Stopwatch Controls */}
-          <div className="flex items-center justify-center gap-3 mt-4">
+          <div className="flex items-center justify-center gap-3 mt-3">
             <button
               onClick={() => {
                 handleResetTimer();
                 if (timerMode === 'multi') handleResetAllMultiLaps();
               }}
-              className="p-3 rounded-2xl bg-slate-800 text-slate-400 hover:text-white active:scale-95 transition-all"
-              title="Reiniciar cronómetro a 00:00"
+              className="p-3 rounded-2xl bg-slate-800 text-slate-300 hover:text-white active:scale-95 transition-transform"
+              title="Reiniciar cronómetro"
+              aria-label="Reiniciar cronómetro"
             >
               <RotateCcw className="w-5 h-5" />
             </button>
 
             <button
               onClick={() => setTimerRunning(!timerRunning)}
-              className={`px-8 py-3.5 rounded-2xl font-black text-base flex items-center gap-2 shadow-lg active:scale-95 transition-all ${
-                timerRunning
-                  ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+              className={`px-8 py-3.5 rounded-2xl font-bold text-base flex items-center gap-2 active:scale-95 transition-transform ${
+                timerRunning ? 'bg-rose-500 text-white' : 'bg-[#EEF3F1] text-[#0B1F2A]'
               }`}
             >
               {timerRunning ? (
                 <>
                   <Pause className="w-5 h-5 fill-current" />
-                  PAUSAR
+                  Pausar
                 </>
               ) : (
                 <>
                   <Play className="w-5 h-5 fill-current" />
-                  LARGADA
+                  Largada
                 </>
               )}
             </button>
@@ -437,146 +406,120 @@ export const PoolsideView: React.FC = () => {
               <button
                 onClick={handleSingleLap}
                 disabled={!timerRunning}
-                className="px-5 py-3 rounded-2xl bg-slate-800 disabled:opacity-40 text-cyan-300 font-bold text-xs hover:bg-slate-700 active:scale-95 transition-all"
+                className="px-5 py-3.5 rounded-2xl bg-slate-800 disabled:opacity-40 text-cyan-300 font-bold text-sm active:scale-95 transition-transform"
               >
-                LAP
+                Parcial
               </button>
             )}
           </div>
 
-          {/* Recent Laps for Single Mode */}
           {timerMode === 'single' && singleLaps.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-900 flex gap-2 overflow-x-auto text-xs justify-center">
+            <ul className="mt-4 flex gap-4 overflow-x-auto justify-center text-sm tabular-nums text-slate-300">
               {singleLaps.slice(0, 4).map((lap, i) => (
-                <span key={i} className="bg-slate-900 px-2 py-1 rounded font-mono text-slate-300">
-                  L{singleLaps.length - i}: <strong>{formatTime(lap)}</strong>
-                </span>
+                <li key={i} className="whitespace-nowrap">
+                  <span className="text-xs text-slate-400">P{singleLaps.length - i}</span>{' '}
+                  <strong className="text-white">{formatTime(lap)}</strong>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </section>
       )}
 
-      {/* ============================================================== */}
-      {/* MODE 3: RELOJ DE SALIDAS (INTERVAL / SEND-OFF TIMER WITH AUDIO) */}
-      {/* ============================================================== */}
+      {/* Reloj de salidas */}
       {timerMode === 'sendoff' && (
-        <div className="space-y-3">
-          {/* Main Giant Interval Display Card */}
-          <div className="bg-slate-950 border-2 border-amber-500/40 rounded-3xl p-5 shadow-2xl text-center relative overflow-hidden">
-            {/* Top Bar inside card: Status & Mute */}
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1">
-                <AlarmClock className="w-3.5 h-3.5" />
-                Reloj de Salidas
+        <div className="space-y-6">
+          <section aria-label="Reloj de salidas" className="text-center">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400">
+                Salida cada <strong className="text-white tabular-nums">{Math.floor(sendoffCycleSecs / 60)}:{String(sendoffCycleSecs % 60).padStart(2, '0')}</strong>
               </span>
-
               <button
                 type="button"
                 onClick={() => {
                   initAudio();
                   setSendoffSound(!sendoffSound);
                 }}
-                className={`p-1.5 rounded-lg flex items-center gap-1 text-[11px] font-semibold border transition-all ${
-                  sendoffSound
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                    : 'bg-slate-900 text-slate-500 border-slate-800'
-                }`}
-                title={sendoffSound ? 'Bip de salida activado' : 'Bip silenciado'}
+                aria-pressed={sendoffSound}
+                className={`inline-flex items-center gap-1 font-semibold ${sendoffSound ? 'text-amber-300' : 'text-slate-500'}`}
+                title={sendoffSound ? 'Bip activado' : 'Bip silenciado'}
               >
-                {sendoffSound ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                <span>{sendoffSound ? 'Bip ON' : 'Mudo'}</span>
+                {sendoffSound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                {sendoffSound ? 'Bip' : 'Mudo'}
               </button>
             </div>
 
-            {/* Repetition Indicator */}
-            <div className="my-1">
+            <p className="mt-2 text-sm font-semibold h-6">
               {sendoffCompleted ? (
-                <div className="text-emerald-400 font-black text-xl flex items-center justify-center gap-2 animate-bounce">
-                  <Sparkles className="w-5 h-5" />
-                  ¡SERIE COMPLETADA!
-                </div>
+                <span className="text-emerald-400">Serie completada</span>
               ) : sendoffIsPrep ? (
-                <div className="text-amber-400 font-bold text-sm tracking-wider animate-pulse">
-                  PREPARADOS PARA LARGAR...
-                </div>
+                <span className="text-amber-400">Preparados…</span>
               ) : (
-                <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  Repetición <span className="text-amber-300 font-mono text-base font-black">{sendoffCurrentRep}</span> de{' '}
-                  <span className="text-white font-mono text-base">{sendoffRepsTotal}</span>
-                </div>
+                <span className="text-slate-300">
+                  Repetición <span className="font-display text-xl text-amber-300 tabular-nums">{sendoffCurrentRep}</span> de{' '}
+                  <span className="font-display text-xl text-white tabular-nums">{sendoffRepsTotal}</span>
+                </span>
               )}
-            </div>
+            </p>
 
-            {/* Giant Countdown Time */}
             <div
-              className={`text-6xl font-black font-mono tracking-tight my-2 transition-colors ${
+              className={`font-display text-8xl font-bold tabular-nums my-1 ${
                 sendoffCompleted
                   ? 'text-emerald-400'
                   : sendoffIsPrep
-                  ? 'text-amber-400 animate-pulse'
+                  ? 'text-amber-400'
                   : sendoffRemainingSecs <= 3 && sendoffRunning
-                  ? 'text-rose-400 animate-ping'
+                  ? 'text-rose-400'
                   : 'text-white'
               }`}
             >
-              {sendoffIsPrep ? `00:0${sendoffPrepSecs}` : formatTime(sendoffRemainingSecs)}
+              {sendoffIsPrep ? `0:0${sendoffPrepSecs}` : formatTime(sendoffRemainingSecs)}
             </div>
 
-            {/* Progress Bar of Current Cycle */}
             {!sendoffIsPrep && (
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden my-3 border border-slate-800">
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden my-3">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-cyan-400 transition-all duration-1000 ease-linear rounded-full"
-                  style={{
-                    width: `${((sendoffCycleSecs - sendoffRemainingSecs) / sendoffCycleSecs) * 100}%`,
-                  }}
+                  className="h-full bg-amber-400 transition-all duration-1000 ease-linear"
+                  style={{ width: `${((sendoffCycleSecs - sendoffRemainingSecs) / sendoffCycleSecs) * 100}%` }}
                 />
               </div>
             )}
 
-            {/* Cycle info subtext */}
-            <div className="text-xs text-slate-400 flex items-center justify-center gap-2 mb-3">
-              <span>Salida cada:</span>
-              <strong className="text-amber-300 font-mono text-sm">{formatTime(sendoffCycleSecs)}</strong>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 mt-3">
               <button
                 onClick={handleSkipPrevRep}
                 disabled={sendoffCurrentRep <= 1 || sendoffIsPrep}
-                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-30 active:scale-95 transition-all"
+                className="p-3 rounded-2xl bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 active:scale-95 transition-transform"
                 title="Repetición anterior"
+                aria-label="Repetición anterior"
               >
                 <SkipBack className="w-4 h-4" />
               </button>
 
               <button
                 onClick={handleResetSendoff}
-                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white active:scale-95 transition-all"
+                className="p-3 rounded-2xl bg-slate-800 text-slate-300 hover:text-white active:scale-95 transition-transform"
                 title="Reiniciar serie"
+                aria-label="Reiniciar serie"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
 
               <button
                 onClick={handleStartSendoff}
-                className={`px-8 py-3.5 rounded-2xl font-black text-base flex items-center gap-2 shadow-lg active:scale-95 transition-all ${
-                  sendoffRunning
-                    ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/30'
-                    : 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/30'
+                className={`px-8 py-3.5 rounded-2xl font-bold text-base flex items-center gap-2 active:scale-95 transition-transform ${
+                  sendoffRunning ? 'bg-rose-500 text-white' : 'bg-[#EEF3F1] text-[#0B1F2A]'
                 }`}
               >
                 {sendoffRunning ? (
                   <>
                     <Pause className="w-5 h-5 fill-current" />
-                    PAUSAR
+                    Pausar
                   </>
                 ) : (
                   <>
                     <Play className="w-5 h-5 fill-current" />
-                    {sendoffCompleted ? 'REPETIR' : 'INICIAR'}
+                    {sendoffCompleted ? 'Repetir' : 'Iniciar'}
                   </>
                 )}
               </button>
@@ -584,38 +527,31 @@ export const PoolsideView: React.FC = () => {
               <button
                 onClick={handleSkipNextRep}
                 disabled={sendoffCurrentRep >= sendoffRepsTotal || sendoffIsPrep}
-                className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-30 active:scale-95 transition-all"
+                className="p-3 rounded-2xl bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30 active:scale-95 transition-transform"
                 title="Siguiente repetición"
+                aria-label="Siguiente repetición"
               >
                 <SkipForward className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          </section>
 
-          {/* Quick Configurator Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-800">
-              <Clock className="w-4 h-4 text-amber-400" />
-              Configurar Serie y Salidas
-            </h3>
+          {/* Configurar la serie */}
+          <section className="space-y-4">
+            <h3 className="font-display text-xl font-bold text-white border-b border-slate-800 pb-1">Configurar la serie</h3>
 
-            {/* Reps and Interval Adjusters */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Cantidad de Reps
-                </label>
-                <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+                <label className="text-xs text-slate-400 block mb-1">Repeticiones</label>
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
                   <button
                     type="button"
+                    aria-label="Menos repeticiones"
                     disabled={sendoffRunning}
-                    onClick={() => {
-                      const n = Math.max(1, sendoffRepsTotal - 1);
-                      setSendoffRepsTotal(n);
-                    }}
-                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                    onClick={() => setSendoffRepsTotal(Math.max(1, sendoffRepsTotal - 1))}
+                    className={stepBtn}
                   >
-                    -
+                    −
                   </button>
                   <input
                     type="number"
@@ -623,14 +559,16 @@ export const PoolsideView: React.FC = () => {
                     max={50}
                     disabled={sendoffRunning}
                     value={sendoffRepsTotal}
+                    aria-label="Repeticiones"
                     onChange={(e) => setSendoffRepsTotal(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full text-center bg-transparent text-white font-mono font-bold text-sm focus:outline-none"
+                    className="w-full text-center bg-transparent text-white font-display text-xl font-bold tabular-nums focus:outline-none"
                   />
                   <button
                     type="button"
+                    aria-label="Más repeticiones"
                     disabled={sendoffRunning}
                     onClick={() => setSendoffRepsTotal(sendoffRepsTotal + 1)}
-                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                    className={stepBtn}
                   >
                     +
                   </button>
@@ -638,21 +576,20 @@ export const PoolsideView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Ciclo de Salida (Seg)
-                </label>
-                <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+                <label className="text-xs text-slate-400 block mb-1">Salida cada (segundos)</label>
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
                   <button
                     type="button"
+                    aria-label="Menos segundos"
                     disabled={sendoffRunning}
                     onClick={() => {
                       const n = Math.max(10, sendoffCycleSecs - 5);
                       setSendoffCycleSecs(n);
                       setSendoffRemainingSecs(n);
                     }}
-                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                    className={stepBtn}
                   >
-                    -
+                    −
                   </button>
                   <input
                     type="number"
@@ -661,22 +598,24 @@ export const PoolsideView: React.FC = () => {
                     max={600}
                     disabled={sendoffRunning}
                     value={sendoffCycleSecs}
+                    aria-label="Segundos del ciclo"
                     onChange={(e) => {
                       const n = Math.max(5, parseInt(e.target.value) || 30);
                       setSendoffCycleSecs(n);
                       setSendoffRemainingSecs(n);
                     }}
-                    className="w-full text-center bg-transparent text-amber-300 font-mono font-bold text-sm focus:outline-none"
+                    className="w-full text-center bg-transparent text-amber-300 font-display text-xl font-bold tabular-nums focus:outline-none"
                   />
                   <button
                     type="button"
+                    aria-label="Más segundos"
                     disabled={sendoffRunning}
                     onClick={() => {
                       const n = sendoffCycleSecs + 5;
                       setSendoffCycleSecs(n);
                       setSendoffRemainingSecs(n);
                     }}
-                    className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold flex items-center justify-center text-sm disabled:opacity-40"
+                    className={stepBtn}
                   >
                     +
                   </button>
@@ -684,21 +623,18 @@ export const PoolsideView: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick interval buttons */}
             <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                Ciclos rápidos habituales:
-              </span>
-              <div className="grid grid-cols-4 gap-1.5 text-xs">
+              <p className="text-xs text-slate-400 mb-1.5">Ciclos habituales</p>
+              <div className="grid grid-cols-4 gap-1.5">
                 {[
-                  { label: 'c/ 45s', secs: 45 },
-                  { label: 'c/ 50s', secs: 50 },
-                  { label: 'c/ 1:00', secs: 60 },
-                  { label: 'c/ 1:15', secs: 75 },
-                  { label: 'c/ 1:30', secs: 90 },
-                  { label: 'c/ 1:40', secs: 100 },
-                  { label: 'c/ 1:45', secs: 105 },
-                  { label: 'c/ 2:00', secs: 120 },
+                  { label: 'c/45s', secs: 45 },
+                  { label: 'c/50s', secs: 50 },
+                  { label: 'c/1:00', secs: 60 },
+                  { label: 'c/1:15', secs: 75 },
+                  { label: 'c/1:30', secs: 90 },
+                  { label: 'c/1:40', secs: 100 },
+                  { label: 'c/1:45', secs: 105 },
+                  { label: 'c/2:00', secs: 120 },
                 ].map((item) => (
                   <button
                     key={item.secs}
@@ -708,10 +644,9 @@ export const PoolsideView: React.FC = () => {
                       setSendoffCycleSecs(item.secs);
                       setSendoffRemainingSecs(item.secs);
                     }}
-                    className={`py-1.5 rounded-lg font-mono text-[11px] font-bold transition-all ${
-                      sendoffCycleSecs === item.secs
-                        ? 'bg-amber-400 text-slate-950 font-black'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    aria-pressed={sendoffCycleSecs === item.secs}
+                    className={`py-2 rounded-lg text-xs font-semibold tabular-nums disabled:opacity-50 ${
+                      sendoffCycleSecs === item.secs ? 'bg-[#EEF3F1] text-[#0B1F2A]' : 'bg-slate-900 text-slate-300 hover:text-white'
                     }`}
                   >
                     {item.label}
@@ -720,142 +655,102 @@ export const PoolsideView: React.FC = () => {
               </div>
             </div>
 
-            {/* Shortcut: Load from active workout in the board */}
             {workouts.length > 0 && (
-              <div className="pt-2 border-t border-slate-800/80">
-                <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider block mb-1">
-                  Cargar desde el Pizarrón de hoy:
-                </span>
-                <div className="space-y-1.5">
-                  {workouts.slice(0, 3).map((w, idx) => (
-                    <button
-                      key={w.id}
-                      type="button"
-                      disabled={sendoffRunning}
-                      onClick={() => handleLoadWorkoutSetIntoSendoff(w)}
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-left text-xs flex items-center justify-between text-slate-300 hover:text-white transition-all"
-                    >
-                      <span className="font-semibold truncate">
-                        #{idx + 1}. {w.reps} x {w.distance}m {w.stroke}
-                      </span>
-                      <span className="text-cyan-400 font-mono text-[11px] font-bold flex-shrink-0 ml-2">
-                        {w.reps} reps
-                      </span>
-                    </button>
+              <div className="rounded-2xl bg-[#EEF3F1] text-[#0B1F2A] p-4">
+                <h4 className="font-display text-lg font-bold">Cargar desde la pizarra</h4>
+                <ul className="mt-1 divide-y divide-[#0B1F2A]/15">
+                  {workouts.slice(0, 3).map((w) => (
+                    <li key={w.id}>
+                      <button
+                        type="button"
+                        disabled={sendoffRunning}
+                        onClick={() => handleLoadWorkoutSetIntoSendoff(w)}
+                        className="w-full py-2 text-left flex items-baseline justify-between gap-2 disabled:opacity-50"
+                      >
+                        <span className="font-display text-xl font-bold tabular-nums whitespace-nowrap">
+                          {w.reps} × {w.distance}
+                        </span>
+                        <span className="flex-1 min-w-0 text-sm truncate">
+                          <span className="font-semibold">{w.stroke}</span>{' '}
+                          <span className="text-[#0E7C9B] font-bold">{zoneName(w.zone)}</span>
+                        </span>
+                      </button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODE 1: SINGLE SWIMMER PACE CARDS */}
-      {/* ============================================================== */}
+      {/* Individual: ritmos de las series de hoy */}
       {timerMode === 'single' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <SwimmerAvatar
-                name={selectedSwimmer.name}
-                photoUrl={selectedSwimmer.photoUrl}
-                size="sm"
-                shape="rounded-xl"
-              />
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Tiempos Clave de {selectedSwimmer.name.split(' ')[0]}
-                </h3>
-                <span className="text-[10px] text-cyan-400 font-bold block">
-                  FCM: {220 - selectedSwimmer.age} bpm
-                </span>
-              </div>
-            </div>
+        <section aria-labelledby="keytimes-title" className="rounded-2xl bg-[#EEF3F1] text-[#0B1F2A] p-4 shadow-xl">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 id="keytimes-title" className="font-display text-xl font-bold truncate">
+              Ritmos de {selectedSwimmer.name.split(' ')[0]}
+            </h3>
+            <span className="text-xs text-[#0B1F2A]/70 tabular-nums whitespace-nowrap">FC máx {220 - selectedSwimmer.age}</span>
           </div>
 
           {workouts.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 text-center">
-              <p className="text-sm font-semibold text-white mb-1">
-                No hay series en el pizarrón.
-              </p>
-              <p className="text-xs text-slate-400">
-                Ve a la pestaña "Pizarrón" para armar las series de hoy y verlas aquí en tamaño gigante.
-              </p>
-            </div>
+            <p className="text-sm mt-2">
+              No hay series en la pizarra. Arma las de hoy en la pestaña Pizarra y aparecen acá.
+            </p>
           ) : (
-            workouts.map((w, idx) => {
-              const pb = selectedSwimmer.pbs[w.stroke]?.[w.distance];
-              let paceTime: number | null = null;
-              let bpm: number | null = null;
-              let pulse5s: number | null = null;
+            <ul className="mt-2 divide-y divide-[#0B1F2A]/15">
+              {workouts.map((w) => {
+                const pb = selectedSwimmer.pbs[w.stroke]?.[w.distance];
+                let paceTime: number | null = null;
+                let bpm: number | null = null;
+                let pulse5s: number | null = null;
 
-              if (pb) {
-                const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
-                const zData = p.zones.find((z) => z.config.code === w.zone);
-                if (zData) {
-                  paceTime = zData.paceTime;
-                  bpm = zData.bpm;
-                  pulse5s = zData.pulse5s;
+                if (pb) {
+                  const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
+                  const zData = p.zones.find((z) => z.config.code === w.zone);
+                  if (zData) {
+                    paceTime = zData.paceTime;
+                    bpm = zData.bpm;
+                    pulse5s = zData.pulse5s;
+                  }
                 }
-              }
 
-              return (
-                <div
-                  key={w.id}
-                  className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex items-center justify-between"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-black text-cyan-400 font-mono">
-                        #{idx + 1}
+                return (
+                  <li key={w.id} className="py-2.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-display text-2xl font-bold tabular-nums whitespace-nowrap">
+                        {w.reps} × {w.distance}
                       </span>
-                      <h4 className="text-base font-bold text-white">
-                        {w.reps} x {w.distance}m {w.stroke}
-                      </h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
-                        {zoneName(w.zone)}
+                      <span className="flex-1 min-w-0 text-sm truncate">
+                        <span className="font-semibold">{w.stroke}</span>{' '}
+                        <span className="text-[#0E7C9B] font-bold">{zoneName(w.zone)}</span>
+                      </span>
+                      <span className="font-display text-2xl font-bold tabular-nums whitespace-nowrap">
+                        {paceTime ? formatTime(paceTime) : 'sin marca'}
                       </span>
                     </div>
-
-                    <div className="flex items-center gap-3 text-xs text-slate-400">
-                      <span>Pausa: <strong className="text-amber-400">{w.customRestSecs || 30}s</strong></span>
-                      {bpm && <span>FC: <strong className="text-red-400">{bpm} bpm</strong></span>}
-                      {pulse5s && <span>5s: <strong className="text-white font-mono">{pulse5s}</strong></span>}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Ritmo
-                    </span>
-                    <div className="text-2xl font-black font-mono text-cyan-300">
-                      {formatTime(paceTime)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                    <p className="text-xs text-[#0B1F2A]/70 tabular-nums">
+                      pausa {w.customRestSecs || 30} s{bpm ? ` · ${bpm} lpm` : ''}
+                      {pulse5s ? ` · ${pulse5s} pulsos en 5 s` : ''}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
+        </section>
       )}
 
-      {/* ============================================================== */}
-      {/* MODE 2: MULTI-LANE STOPWATCH */}
-      {/* ============================================================== */}
+      {/* Andariveles */}
       {timerMode === 'multi' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Andariveles en Pista ({lanes.length})
-            </h3>
+        <section className="space-y-5">
+          <div className="flex items-baseline justify-between border-b border-slate-800 pb-1">
+            <h3 className="font-display text-xl font-bold text-white">Andariveles en pista</h3>
             {lanes.length < 6 && (
-              <button
-                onClick={handleAddLane}
-                className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-bold"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Añadir Andarivel
+              <button onClick={handleAddLane} className="inline-flex items-center gap-1 text-sm font-semibold text-cyan-300 hover:text-cyan-200">
+                <Plus className="w-4 h-4" />
+                Agregar
               </button>
             )}
           </div>
@@ -872,188 +767,119 @@ export const PoolsideView: React.FC = () => {
             }
 
             const lastLap = lane.laps[0] || null;
-            let diff: number | null = null;
-            if (lastLap && targetPace) {
-              diff = lastLap - targetPace;
-            }
+            const diff = lastLap && targetPace ? lastLap - targetPace : null;
+            const diffClass = (d: number) => (d <= 0.4 ? 'text-emerald-400' : 'text-rose-400');
+            const fmtDiff = (d: number) => (d > 0 ? `+${d.toFixed(1)}s` : `${d.toFixed(1)}s`);
 
             return (
-              <div
-                key={lane.id}
-                className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3"
-              >
-                {/* Lane Header */}
-                <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 font-black text-xs flex items-center justify-center font-mono">
-                      C{lane.laneNumber}
-                    </span>
-                    <SwimmerAvatar
-                      name={laneSwimmer.name}
-                      photoUrl={laneSwimmer.photoUrl}
-                      size="xs"
-                      shape="rounded-md"
-                    />
-                    <select
-                      value={lane.swimmerId}
-                      onChange={(e) => handleUpdateLane(lane.id, { swimmerId: e.target.value })}
-                      className="bg-slate-950 border border-slate-800 rounded-lg text-xs font-bold text-white px-2 py-1 max-w-[150px] truncate"
-                    >
-                      {swimmers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : ''}
-                        </option>
-                      ))}
-                    </select>
-
-                  </div>
-
+              <div key={lane.id} className="space-y-3 pb-5 border-b border-slate-800 last:border-b-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-2xl font-bold text-cyan-300 w-9">C{lane.laneNumber}</span>
+                  <SwimmerAvatar name={laneSwimmer.name} photoUrl={laneSwimmer.photoUrl} size="xs" shape="rounded-md" />
+                  <select
+                    value={lane.swimmerId}
+                    onChange={(e) => handleUpdateLane(lane.id, { swimmerId: e.target.value })}
+                    aria-label={`Nadador del andarivel ${lane.laneNumber}`}
+                    className={`${field} flex-1 min-w-0 truncate`}
+                  >
+                    {swimmers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.sede ? `(${s.sede})` : s.club ? `(${s.club})` : ''}
+                      </option>
+                    ))}
+                  </select>
                   {lanes.length > 1 && (
                     <button
                       onClick={() => handleRemoveLane(lane.id)}
-                      className="p-1 rounded-lg text-slate-500 hover:text-red-400"
+                      className="p-2 text-slate-500 hover:text-red-400"
                       title="Quitar andarivel"
+                      aria-label={`Quitar andarivel ${lane.laneNumber}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
 
-                {/* Target Configuration for Lane */}
-                <div className="grid grid-cols-3 gap-1.5 text-xs">
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-0.5">
-                      Estilo
-                    </label>
-                    <select
-                      value={lane.stroke}
-                      onChange={(e) => handleUpdateLane(lane.id, { stroke: e.target.value as StrokeType })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-[11px] font-semibold text-cyan-300"
-                    >
-                      {STROKES.map((s) => (
-                        <option key={s.type} value={s.type}>
-                          {s.type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-0.5">
-                      Distancia
-                    </label>
-                    <select
-                      value={lane.distance}
-                      onChange={(e) => handleUpdateLane(lane.id, { distance: parseInt(e.target.value) })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-[11px] font-semibold text-white font-mono"
-                    >
-                      {STROKE_DISTANCES[lane.stroke].map((d) => (
-                        <option key={d} value={d}>
-                          {d}m
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[9px] text-slate-400 font-bold uppercase block mb-0.5">
-                      Zona
-                    </label>
-                    <select
-                      value={lane.zone}
-                      onChange={(e) => handleUpdateLane(lane.id, { zone: e.target.value as ZoneCode })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-[11px] font-semibold text-amber-300"
-                    >
-                      {zones.map((z) => (
-                        <option key={z.code} value={z.code}>
-                          {z.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={lane.stroke}
+                    onChange={(e) => handleUpdateLane(lane.id, { stroke: e.target.value as StrokeType })}
+                    aria-label="Estilo"
+                    className={field}
+                  >
+                    {STROKES.map((s) => (
+                      <option key={s.type} value={s.type}>{s.type}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={lane.distance}
+                    onChange={(e) => handleUpdateLane(lane.id, { distance: parseInt(e.target.value) })}
+                    aria-label="Distancia"
+                    className={`${field} tabular-nums`}
+                  >
+                    {STROKE_DISTANCES[lane.stroke].map((d) => (
+                      <option key={d} value={d}>{d} m</option>
+                    ))}
+                  </select>
+                  <select
+                    value={lane.zone}
+                    onChange={(e) => handleUpdateLane(lane.id, { zone: e.target.value as ZoneCode })}
+                    aria-label="Zona"
+                    className={field}
+                  >
+                    {zones.map((z) => (
+                      <option key={z.code} value={z.code}>{z.label}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Target Pace Banner & Split Button */}
-                <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                      Ritmo Objetivo
-                    </span>
-                    <div className="text-lg font-black font-mono text-cyan-300">
-                      {formatTime(targetPace)}
-                    </div>
+                    <p className="text-xs text-slate-400">Ritmo objetivo</p>
+                    <p className="font-display text-3xl font-bold text-white tabular-nums leading-none">{formatTime(targetPace)}</p>
                     {diff !== null && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded inline-block mt-0.5 ${
-                          diff <= 0.4
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'bg-rose-500/20 text-rose-400'
-                        }`}
-                      >
-                        {diff > 0 ? `+${diff.toFixed(1)}s` : `${diff.toFixed(1)}s`}
-                      </span>
+                      <span className={`text-xs font-bold tabular-nums ${diffClass(diff)}`}>{fmtDiff(diff)}</span>
                     )}
                   </div>
 
-                  {/* Big Lap Button */}
                   <button
                     onClick={() => handleLaneLap(lane.id)}
                     disabled={!timerRunning}
-                    className="flex-1 py-3 px-4 rounded-2xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-black text-sm shadow-md shadow-cyan-500/20 active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
+                    className="flex-1 py-3.5 px-4 rounded-2xl bg-[#EEF3F1] text-[#0B1F2A] disabled:opacity-40 font-bold text-sm active:scale-95 transition-transform flex items-center justify-center gap-1.5"
                   >
                     <Clock className="w-4 h-4" />
-                    LLEGADA C{lane.laneNumber}
+                    Llegada C{lane.laneNumber}
                   </button>
                 </div>
 
-                {/* Laps List and comparison */}
                 {lane.laps.length > 0 && (
-                  <div className="pt-2 border-t border-slate-800/60">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold uppercase text-slate-400">
-                        Últimos Parciales
-                      </span>
-                      <button
-                        onClick={() => handleClearLaneLaps(lane.id)}
-                        className="text-[10px] text-slate-500 hover:text-rose-400"
-                      >
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-400">Últimos parciales</span>
+                      <button onClick={() => handleClearLaneLaps(lane.id)} className="text-xs text-slate-400 hover:text-rose-400">
                         Limpiar
                       </button>
                     </div>
-
-                    <div className="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+                    <ul className="flex gap-4 overflow-x-auto text-sm tabular-nums">
                       {lane.laps.slice(0, 5).map((lap, idx) => {
-                        const lapNum = lane.laps.length - idx;
                         const lapDiff = targetPace ? lap - targetPace : null;
-
                         return (
-                          <div
-                            key={idx}
-                            className="bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 font-mono flex items-center gap-1.5 flex-shrink-0"
-                          >
-                            <span className="text-slate-500 text-[10px]">#{lapNum}</span>
+                          <li key={idx} className="flex-shrink-0 whitespace-nowrap">
+                            <span className="text-xs text-slate-400">#{lane.laps.length - idx}</span>{' '}
                             <strong className="text-white">{formatTime(lap)}</strong>
                             {lapDiff !== null && (
-                              <span
-                                className={`text-[10px] font-bold px-1 rounded ${
-                                  lapDiff <= 0.4
-                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                    : 'bg-rose-500/20 text-rose-400'
-                                }`}
-                              >
-                                {lapDiff > 0 ? `+${lapDiff.toFixed(1)}s` : `${lapDiff.toFixed(1)}s`}
-                              </span>
+                              <span className={`ml-1 text-xs font-bold ${diffClass(lapDiff)}`}>{fmtDiff(lapDiff)}</span>
                             )}
-                          </div>
+                          </li>
                         );
                       })}
-                    </div>
+                    </ul>
                   </div>
                 )}
               </div>
             );
           })}
-        </div>
+        </section>
       )}
     </div>
   );
