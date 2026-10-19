@@ -5,6 +5,7 @@ import {
   calculateMaxHR,
   formatTime,
   calculatePacesForDistance,
+  zoneName,
 } from '../utils/swimCalculations';
 import { SwimmerAvatar } from '../components/SwimmerAvatar';
 import {
@@ -48,6 +49,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
     workouts,
     savedWorkouts,
     switchRole,
+    zones,
   } = useSwim();
 
   const isCoach = currentUser?.role === 'coach';
@@ -83,13 +85,13 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
   // Calculated mini paces for 100m if PB is present
   const paces100Map = useMemo(() => {
     if (!pb100Free || pb100Free <= 0) return null;
-    const calc = calculatePacesForDistance(pb100Free, 100, 'LIBRE', selectedSwimmer.age);
+    const calc = calculatePacesForDistance(pb100Free, 100, 'LIBRE', selectedSwimmer.age, zones);
     const map: Record<string, number> = {};
     calc.zones.forEach((z) => {
       map[z.config.code] = z.paceTime;
     });
     return map;
-  }, [pb100Free, selectedSwimmer.age]);
+  }, [pb100Free, selectedSwimmer.age, zones]);
 
   // Aggregate Club and Sede statistics
   const { uniqueClubsCount, sedeStats } = useMemo(() => {
@@ -518,7 +520,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({
                     <span className="text-slate-400 text-[11px]">{w.stroke}</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                    {w.zone}
+                    {zoneName(w.zone)}
                   </span>
                 </div>
               ))}

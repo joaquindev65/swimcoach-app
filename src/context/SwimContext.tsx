@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import type {
   Swimmer,
   StrokeType,
@@ -7,7 +7,10 @@ import type {
   WorkoutCategory,
   UserProfile,
   UserRole,
+  ZoneCode,
+  ZoneConfig,
 } from '../types/swim';
+import { applyZoneRanges, type ZoneRanges } from '../utils/swimCalculations';
 import { DEFAULT_SWIMMERS } from '../data/defaultSwimmers';
 import { DEFAULT_WORKOUT_TEMPLATES } from '../data/defaultWorkouts';
 import { addHistory } from '../utils/history';
@@ -26,6 +29,9 @@ export const DEFAULT_COACH_PROFILE: UserProfile = {
 interface SwimContextType {
   currentUser: UserProfile | null;
   storageError: boolean;
+  zones: ZoneConfig[];
+  setZoneRange: (code: ZoneCode, min: number, max: number) => void;
+  resetZoneRanges: () => void;
   isLoggedIn: boolean;
   login: (profile: Partial<UserProfile> & { name: string; role: UserRole }) => void;
   logout: () => void;
@@ -59,6 +65,7 @@ const STORAGE_KEY_WORKOUTS = 'swimcoach_workouts_v1';
 const STORAGE_KEY_SAVED_WORKOUTS = 'swimcoach_saved_workouts_v1';
 const STORAGE_KEY_USER = 'swimcoach_user_session_v1';
 const STORAGE_KEY_COACH = 'swimcoach_coach_profile_v1';
+const STORAGE_KEY_ZONES = 'swimcoach_zone_ranges_v1';
 
 /** Guarda en localStorage sin romper la app si está lleno o bloqueado. */
 const save = (key: string, value: unknown): boolean => {
@@ -156,6 +163,17 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return swimmers[0]?.id || DEFAULT_SWIMMERS[0].id;
   });
 
+  const [zoneRanges, setZoneRanges] = useState<ZoneRanges>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY_ZONES) || 'null');
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (e) {
+      console.error('Error loading zone ranges from localStorage', e);
+    }
+    return {};
+  });
+  const zones = useMemo(() => applyZoneRanges(zoneRanges), [zoneRanges]);
+
   const [storageError, setStorageError] = useState(false);
 
   useEffect(() => {
@@ -163,6 +181,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       save(STORAGE_KEY_SWIMMERS, swimmers),
       save(STORAGE_KEY_WORKOUTS, workouts),
       save(STORAGE_KEY_SAVED_WORKOUTS, savedWorkouts),
+      save(STORAGE_KEY_ZONES, zoneRanges),
     ];
     if (currentUser) {
       results.push(save(STORAGE_KEY_USER, currentUser));
@@ -171,7 +190,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem(STORAGE_KEY_USER);
     }
     setStorageError(results.includes(false));
-  }, [swimmers, workouts, savedWorkouts, currentUser]);
+  }, [swimmers, workouts, savedWorkouts, zoneRanges, currentUser]);
 
   const login = (profile: Partial<UserProfile> & { name: string; role: UserRole }) => {
     const user: UserProfile = {
@@ -282,12 +301,19 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const setZoneRange = (code: ZoneCode, min: number, max: number) => {
+    setZoneRanges((prev) => ({ ...prev, [code]: { min, max } }));
+  };
+
+  const resetZoneRanges = () => setZoneRanges({});
+
   const resetToDefaults = () => {
     if (window.confirm('¿Reiniciar a los datos originales de la planilla del entrenador?')) {
       setSwimmers(DEFAULT_SWIMMERS);
       setSelectedSwimmerId(DEFAULT_SWIMMERS[0].id);
       setSavedWorkouts(DEFAULT_WORKOUT_TEMPLATES);
       setWorkouts([]);
+      resetZoneRanges();
       if (currentUser?.swimmerId) switchRole('coach');
     }
   };
@@ -359,6 +385,7 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       swimmers,
       workouts,
       savedWorkouts,
+      zoneRanges,
     };
 
     const jsonString = JSON.stringify(backupData, null, 2);
@@ -406,6 +433,9 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setWorkouts(data.workouts);
       }
 
+      // applyZoneRanges descarta rangos inválidos
+      setZoneRanges(data.zoneRanges && typeof data.zoneRanges === 'object' ? data.zoneRanges : {});
+
       if (Array.isArray(data.savedWorkouts) && data.savedWorkouts.length > 0) {
         setSavedWorkouts(data.savedWorkouts);
       }
@@ -427,6 +457,9 @@ export const SwimProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         currentUser,
         storageError,
+        zones,
+        setZoneRange,
+        resetZoneRanges,
         isLoggedIn: !!currentUser,
         login,
         logout,

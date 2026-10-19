@@ -4,9 +4,12 @@ export type ZoneCode = 'A1' | 'A2_80' | 'A2_85' | 'MVO2_90' | 'MVO2_95' | 'TL' |
 
 export interface ZoneConfig {
   code: ZoneCode;
-  label: string;
+  name: string;  // nombre corto, ej. 'A2'
+  label: string; // nombre con rango, ej. 'A2 (75–80%)'
   category: 'A1' | 'A2' | 'MVO2' | 'TL' | 'RL' | 'VEL';
-  vmPercent: number; // e.g. 0.80, 0.85, 0.90, 0.95, 0.97, 1.00
+  minPct: number; // entrada del rango (intensidad menor)
+  maxPct: number; // salida del rango (intensidad mayor)
+  vmPercent: number; // = maxPct / 100, referencia para ritmo, FC y descanso
   description: string;
   restDescription: string;
   defaultRestSecs: (distance: number) => number;
@@ -46,7 +49,8 @@ export interface PaceCalculation {
   trainingBaseTime: number;// T_comp + Increment
   zones: {
     config: ZoneConfig;
-    paceTime: number;      // T_base * (2 - vm)
+    paceTime: number;      // T_base * (2 - maxPct): ritmo de salida (más rápido)
+    paceSlow: number;      // T_base * (2 - minPct): ritmo de entrada (más lento)
     bpm: number;           // (220 - age) * vm
     pulse5s: number;       // bpm / 12
     restSecs: number;

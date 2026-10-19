@@ -5,7 +5,7 @@ import {
   formatTime,
   STROKES,
   STROKE_DISTANCES,
-  ZONES_CONFIG,
+  zoneName,
 } from '../utils/swimCalculations';
 import {
   initAudio,
@@ -36,7 +36,7 @@ import { SwimmerAvatar } from '../components/SwimmerAvatar';
 import type { StrokeType, ZoneCode, MultiLaneSlot, WorkoutSet } from '../types/swim';
 
 export const PoolsideView: React.FC = () => {
-  const { swimmers, selectedSwimmer, workouts } = useSwim();
+  const { swimmers, selectedSwimmer, workouts, zones } = useSwim();
 
   // Mode: 'single' | 'multi' | 'sendoff'
   const [timerMode, setTimerMode] = useState<'single' | 'multi' | 'sendoff'>('single');
@@ -229,7 +229,7 @@ export const PoolsideView: React.FC = () => {
     const pb = selectedSwimmer.pbs[w.stroke]?.[w.distance];
     let cycle = 60;
     if (pb) {
-      const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age);
+      const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
       const zData = p.zones.find((z) => z.config.code === w.zone);
       if (zData) {
         const rest = w.customRestSecs ?? zData.restSecs;
@@ -791,7 +791,7 @@ export const PoolsideView: React.FC = () => {
               let pulse5s: number | null = null;
 
               if (pb) {
-                const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age);
+                const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
                 const zData = p.zones.find((z) => z.config.code === w.zone);
                 if (zData) {
                   paceTime = zData.paceTime;
@@ -814,7 +814,7 @@ export const PoolsideView: React.FC = () => {
                         {w.reps} x {w.distance}m {w.stroke}
                       </h4>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">
-                        {w.zone.replace('_', ' ')}
+                        {zoneName(w.zone)}
                       </span>
                     </div>
 
@@ -866,7 +866,7 @@ export const PoolsideView: React.FC = () => {
             let targetPace: number | null = null;
 
             if (pb) {
-              const p = calculatePacesForDistance(pb, lane.distance, lane.stroke, laneSwimmer.age);
+              const p = calculatePacesForDistance(pb, lane.distance, lane.stroke, laneSwimmer.age, zones);
               const zData = p.zones.find((z) => z.config.code === lane.zone);
               if (zData) targetPace = zData.paceTime;
             }
@@ -964,9 +964,9 @@ export const PoolsideView: React.FC = () => {
                       onChange={(e) => handleUpdateLane(lane.id, { zone: e.target.value as ZoneCode })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg p-1 text-[11px] font-semibold text-amber-300"
                     >
-                      {ZONES_CONFIG.map((z) => (
+                      {zones.map((z) => (
                         <option key={z.code} value={z.code}>
-                          {z.code.replace('_', ' ')}
+                          {z.label}
                         </option>
                       ))}
                     </select>

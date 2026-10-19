@@ -4,7 +4,7 @@ import type { StrokeType, ZoneCode, WorkoutCategory } from '../types/swim';
 import {
   STROKES,
   STROKE_DISTANCES,
-  ZONES_CONFIG,
+  zoneName,
   calculatePacesForDistance,
   formatTime,
 } from '../utils/swimCalculations';
@@ -35,6 +35,7 @@ export const WorkoutBuilderView: React.FC = () => {
     saveCurrentWorkout,
     loadSavedWorkout,
     deleteSavedWorkout,
+    zones,
   } = useSwim();
 
   // Builder form state
@@ -99,7 +100,7 @@ export const WorkoutBuilderView: React.FC = () => {
       let cycle = '';
 
       if (pb) {
-        const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age);
+        const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
         const zData = p.zones.find((z) => z.config.code === w.zone);
         if (zData) {
           paceStr = formatTime(zData.paceTime);
@@ -109,7 +110,7 @@ export const WorkoutBuilderView: React.FC = () => {
         }
       }
 
-      msg += `${idx + 1}. *${w.reps} x ${w.distance}m ${w.stroke}* @ *${w.zone.replace('_', ' ')}*\n`;
+      msg += `${idx + 1}. *${w.reps} x ${w.distance}m ${w.stroke}* @ *${zoneName(w.zone)}*\n`;
       msg += `   ⏱️ Ritmo objetivo: *${paceStr}* | Pausa: *${rest}s*${cycle}\n\n`;
     });
 
@@ -301,9 +302,9 @@ export const WorkoutBuilderView: React.FC = () => {
               onChange={(e) => setZone(e.target.value as ZoneCode)}
               className="w-full h-[38px] bg-slate-950 border border-slate-800 rounded-xl px-2 text-xs font-bold text-white focus:outline-none focus:border-cyan-500"
             >
-              {ZONES_CONFIG.map((z) => (
+              {zones.map((z) => (
                 <option key={z.code} value={z.code}>
-                  {z.code.replace('_', ' ')} ({z.label})
+                  {z.label}
                 </option>
               ))}
             </select>
@@ -403,7 +404,7 @@ export const WorkoutBuilderView: React.FC = () => {
             let cycleSecs: number | null = null;
 
             if (pb) {
-              const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age);
+              const p = calculatePacesForDistance(pb, w.distance, w.stroke, selectedSwimmer.age, zones);
               const zData = p.zones.find((z) => z.config.code === w.zone);
               if (zData) {
                 paceTime = zData.paceTime;
@@ -428,7 +429,7 @@ export const WorkoutBuilderView: React.FC = () => {
                         {w.reps} x {w.distance}m {w.stroke}
                       </h4>
                       <span className="text-[10px] font-bold px-1.5 py-0.2 bg-slate-800 text-cyan-300 rounded border border-slate-700">
-                        {w.zone.replace('_', ' ')}
+                        {zoneName(w.zone)}
                       </span>
                     </div>
 

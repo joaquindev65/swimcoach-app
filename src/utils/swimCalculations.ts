@@ -1,4 +1,4 @@
-import type { StrokeType, ZoneConfig, PaceCalculation } from '../types/swim';
+import type { StrokeType, ZoneCode, ZoneConfig, PaceCalculation } from '../types/swim';
 
 export const STROKES: { type: StrokeType; label: string; icon: string }[] = [
   { type: 'LIBRE', label: 'Crawl / Libre', icon: '🏊' },
@@ -16,12 +16,15 @@ export const STROKE_DISTANCES: Record<StrokeType, number[]> = {
   COMBINADO: [100, 200, 400],
 };
 
-export const ZONES_CONFIG: ZoneConfig[] = [
+type ZoneDef = Omit<ZoneConfig, 'label' | 'vmPercent'>;
+
+const ZONE_DEFS: ZoneDef[] = [
   {
     code: 'A1',
-    label: 'A1 (<80%)',
+    name: 'A1',
     category: 'A1',
-    vmPercent: 0.75,
+    minPct: 60,
+    maxPct: 74,
     description: 'Aeróbico Ligero: Calentamientos, aflojes, técnica.',
     restDescription: '10 seg o más',
     defaultRestSecs: () => 15,
@@ -29,9 +32,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'A2_80',
-    label: 'A2 (80%)',
+    name: 'A2',
     category: 'A2',
-    vmPercent: 0.80,
+    minPct: 75,
+    maxPct: 80,
     description: 'Aeróbico Medio: Series largas de base aeróbica y umbral.',
     restDescription: '20s en 50m, 30s en 100m, 45s en 200m',
     defaultRestSecs: (d: number) => (d <= 50 ? 20 : d <= 100 ? 30 : d <= 200 ? 45 : 60),
@@ -39,9 +43,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'A2_85',
-    label: 'A2 (85%)',
+    name: 'A3',
     category: 'A2',
-    vmPercent: 0.85,
+    minPct: 80,
+    maxPct: 85,
     description: 'Aeróbico Medio Intenso: Series submáximas continuas.',
     restDescription: '20s en 50m, 30s en 100m, 45s en 200m',
     defaultRestSecs: (d: number) => (d <= 50 ? 20 : d <= 100 ? 30 : d <= 200 ? 45 : 60),
@@ -49,9 +54,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'MVO2_90',
-    label: 'MVO2 (90%)',
+    name: 'MVO2 90',
     category: 'MVO2',
-    vmPercent: 0.90,
+    minPct: 85,
+    maxPct: 90,
     description: 'Consumo Máximo de O2: Series con mucho descanso o Broken (USRPT).',
     restDescription: 'Descanso 1 a 1 (1 ejecución a 1 descanso)',
     defaultRestSecs: (_d: number) => 60, // dinámico según tiempo de ejecución
@@ -59,9 +65,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'MVO2_95',
-    label: 'MVO2 (95%)',
+    name: 'MVO2 95',
     category: 'MVO2',
-    vmPercent: 0.95,
+    minPct: 91,
+    maxPct: 95,
     description: 'Consumo Máximo de O2 Alto: Ritmos al límite del VO2 Max.',
     restDescription: 'Descanso 1 a 1 (1 ejecución a 1 descanso)',
     defaultRestSecs: (_d: number) => 60,
@@ -69,9 +76,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'TL',
-    label: 'TL (97%-100%)',
+    name: 'TL',
     category: 'TL',
-    vmPercent: 0.97,
+    minPct: 94,
+    maxPct: 97,
     description: 'Tolerancia al Lactato: Series cortas con mucho descanso. Glucosa + láctico.',
     restDescription: 'Descanso 1 a 4 (1 ejecución a 4 de descanso)',
     defaultRestSecs: (_d: number) => 120, // dinámico x4
@@ -79,9 +87,10 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'RL',
-    label: 'RL (97%-100%)',
+    name: 'RL',
     category: 'RL',
-    vmPercent: 0.97,
+    minPct: 94,
+    maxPct: 97,
     description: 'Resistencia al Lactato: Series cortas con descanso medio. Glucosa hasta seg 30.',
     restDescription: 'Descanso 1 a 1',
     defaultRestSecs: (_d: number) => 45,
@@ -89,15 +98,41 @@ export const ZONES_CONFIG: ZoneConfig[] = [
   },
   {
     code: 'VEL',
-    label: 'VEL (100%)',
+    name: 'VEL',
     category: 'VEL',
-    vmPercent: 1.00,
+    minPct: 98,
+    maxPct: 100,
     description: 'Velocidad Pura: Piques cortos de 15 a 25m a máxima explosividad.',
     restDescription: '2 min de descanso por cada 25m',
     defaultRestSecs: (d: number) => Math.max(120, (d / 25) * 120),
     energySystem: 'Fosfágenos (ATP-PCr)',
   },
 ];
+
+/** Aplica un rango a la zona: recalcula etiqueta y porcentaje de referencia. */
+const withRange = (z: ZoneDef, minPct: number, maxPct: number): ZoneConfig => ({
+  ...z,
+  minPct,
+  maxPct,
+  vmPercent: maxPct / 100,
+  label: `${z.name} (${minPct}–${maxPct}%)`,
+});
+
+export const ZONES_CONFIG: ZoneConfig[] = ZONE_DEFS.map((z) => withRange(z, z.minPct, z.maxPct));
+
+/** Nombre corto de una zona a partir de su código (ej. 'A2_85' -> 'A3'). */
+export const zoneName = (code: string): string => ZONES_CONFIG.find((z) => z.code === code)?.name ?? code;
+
+export type ZoneRanges = Partial<Record<ZoneCode, { min: number; max: number }>>;
+
+/** Zonas por defecto con los rangos personalizados; ignora rangos inválidos. */
+export function applyZoneRanges(ranges: ZoneRanges | undefined): ZoneConfig[] {
+  return ZONE_DEFS.map((z) => {
+    const r = ranges?.[z.code];
+    const valid = r && r.min >= 1 && r.max <= 100 && r.min <= r.max;
+    return valid ? withRange(z, r.min, r.max) : withRange(z, z.minPct, z.maxPct);
+  });
+}
 
 /** Formatea segundos a mm:ss.cc o ss.cc */
 export function formatTime(seconds: number | undefined | null): string {
@@ -141,7 +176,8 @@ export function calculatePacesForDistance(
   competitionTime: number,
   distance: number,
   stroke: StrokeType,
-  swimmerAge: number
+  swimmerAge: number,
+  zonesConfig: ZoneConfig[] = ZONES_CONFIG
 ): PaceCalculation {
   const maxHR = calculateMaxHR(swimmerAge);
 
@@ -155,10 +191,11 @@ export function calculatePacesForDistance(
   // TIEMPO ENTRENAMIENTO = TIEMPO_COMP + INCREMENTO = TIEMPO_COMP * 1.03
   const trainingBaseTime = competitionTime + incrementTime;
 
-  const zones = ZONES_CONFIG.map((config) => {
+  const zones = zonesConfig.map((config) => {
     // Fórmula de la planilla: TIEMPO_ZONA = TIEMPO_ENTRENAMIENTO * (2 - %vm)
     const factor = 2 - config.vmPercent;
     const paceTime = trainingBaseTime * factor;
+    const paceSlow = trainingBaseTime * (2 - config.minPct / 100);
 
     // Frecuencia cardíaca y pulso en 5 segundos
     const { bpm, pulse5s } = calculateZoneHR(maxHR, config.vmPercent);
@@ -174,6 +211,7 @@ export function calculatePacesForDistance(
     return {
       config,
       paceTime,
+      paceSlow,
       bpm,
       pulse5s,
       restSecs,

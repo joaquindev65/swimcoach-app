@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Heart, Zap, ShieldAlert, Award } from 'lucide-react';
-import { ZONES_CONFIG } from '../utils/swimCalculations';
+import { useSwim } from '../context/SwimContext';
 
 interface InfoModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface InfoModalProps {
 }
 
 export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
+  const { zones } = useSwim();
   if (!isOpen) return null;
 
   return (
@@ -71,12 +72,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
               Zonas de Intensidad (Sheet: INTENSIDADES)
             </h4>
 
-            {ZONES_CONFIG.map((z) => (
+            {zones.map((z) => (
               <div key={z.code} className="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-white text-xs">{z.label}</span>
                   <span className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                    {Math.round(z.vmPercent * 100)}% vm
+                    {z.minPct}–{z.maxPct}% vm
                   </span>
                 </div>
                 <p className="text-slate-300 text-[11px] mb-1.5 leading-snug">{z.description}</p>

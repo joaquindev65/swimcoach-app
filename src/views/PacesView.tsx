@@ -6,9 +6,11 @@ import {
   STROKE_DISTANCES,
   calculatePacesForDistance,
   formatTime,
+  zoneName,
 } from '../utils/swimCalculations';
 import { historyFor } from '../utils/history';
 import { TimeInputModal } from '../components/TimeInputModal';
+import { ZoneSettingsModal } from '../components/ZoneSettingsModal';
 import {
   Timer,
   Target,
@@ -27,10 +29,11 @@ interface PacesViewProps {
 }
 
 export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
-  const { selectedSwimmer, updatePB, addWorkoutSet } = useSwim();
+  const { selectedSwimmer, updatePB, addWorkoutSet, zones } = useSwim();
   const [selectedStroke, setSelectedStroke] = useState<StrokeType>('LIBRE');
   const [selectedDistance, setSelectedDistance] = useState<number>(100);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isZonesOpen, setIsZonesOpen] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
 
   // Available distances for the current stroke
@@ -50,7 +53,8 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
         currentPB,
         currentDistance,
         selectedStroke,
-        selectedSwimmer.age
+        selectedSwimmer.age,
+        zones
       )
     : null;
 
@@ -65,7 +69,7 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
     text += `*ZONAS FISIOLÓGICAS:*\n`;
 
     paces.zones.forEach((z) => {
-      text += `▫️ *${z.config.code}* (${Math.round(z.config.vmPercent * 100)}%): *${formatTime(z.paceTime)}* | FC: ${z.bpm}bpm (5s: *${z.pulse5s}*)\n`;
+      text += `▫️ *${zoneName(z.config.code)}* (${z.config.minPct}–${z.config.maxPct}%): *${formatTime(z.paceSlow)} – ${formatTime(z.paceTime)}* | FC: ${z.bpm}bpm (5s: *${z.pulse5s}*)\n`;
     });
 
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -282,6 +286,12 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
               Ritmos por Zona Fisiológica
             </h3>
             <button
+              onClick={() => setIsZonesOpen(true)}
+              className="ml-auto mr-3 text-xs font-semibold text-cyan-400 hover:text-cyan-300 active:scale-95"
+            >
+              Ajustar zonas
+            </button>
+            <button
               onClick={handleShareWhatsApp}
               className="flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:scale-95"
             >
@@ -292,7 +302,6 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
 
           <div className="space-y-2">
             {paces.zones.map((z) => {
-              const percent = Math.round(z.config.vmPercent * 100);
               const isSpeed = z.config.category === 'VEL';
               const isVo2 = z.config.category === 'MVO2';
               const isLactate = z.config.category === 'TL' || z.config.category === 'RL';
@@ -314,10 +323,10 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border ${badgeColor}`}>
-                          {z.config.code.replace('_', ' ')}
+                          {z.config.name}
                         </span>
                         <span className="text-xs font-bold text-white">
-                          {percent}% vm
+                          {z.config.minPct}–{z.config.maxPct}% vm
                         </span>
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
@@ -344,6 +353,9 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
                       </span>
                       <span className="text-sm font-black font-mono text-cyan-300">
                         {formatTime(z.paceTime)}
+                      </span>
+                      <span className="text-[9px] text-slate-500 block">
+                        entrada {formatTime(z.paceSlow)}
                       </span>
                     </div>
 
@@ -379,6 +391,8 @@ export const PacesView: React.FC<PacesViewProps> = ({ onOpenConverter }) => {
           </div>
         </div>
       )}
+
+      <ZoneSettingsModal isOpen={isZonesOpen} onClose={() => setIsZonesOpen(false)} />
 
       {/* Time Input Modal */}
       <TimeInputModal
